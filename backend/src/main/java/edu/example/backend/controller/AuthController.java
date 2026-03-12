@@ -30,12 +30,12 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<APIResponse> signIn(@RequestBody AuthDTO authDTO) {
-        String token = authService.authenticate(authDTO);
+        AuthResponseDTO token = authService.authenticate(authDTO);
         return ResponseEntity.ok(
                 APIResponse.builder()
                         .status(200)
                         .message("Login Successful")
-                        .data(AuthResponseDTO.builder().token(token).build())
+                        .data(AuthResponseDTO.builder().token(token.getToken()).role(token.getRole()).build())
                         .build()
         );
     }

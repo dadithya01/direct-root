@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 public class RegisterDTO {
     private String username;
     private String password;
-    private Role role; // Only used during registration
+    private Role role;
 }

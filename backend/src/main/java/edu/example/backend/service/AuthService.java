@@ -1,6 +1,7 @@
 package edu.example.backend.service;
 
 import edu.example.backend.dto.AuthDTO;
+import edu.example.backend.dto.AuthResponseDTO;
 import edu.example.backend.dto.RegisterDTO;
 import edu.example.backend.entity.User;
 import edu.example.backend.repository.UserRepository;
@@ -29,12 +30,16 @@ public class AuthService {
         return jwtService.generateToken(user.getUsername());
     }
 
-    public String authenticate(AuthDTO dto) {
+    public AuthResponseDTO authenticate(AuthDTO dto) {
+
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            return jwtService.generateToken(user.getUsername());
+            String token=jwtService.generateToken(user.getUsername());
+            AuthResponseDTO authResponseDTO=new AuthResponseDTO(token,user.getRole());
+            return authResponseDTO;
+
         }
         throw new RuntimeException("Invalid credentials");
     }
