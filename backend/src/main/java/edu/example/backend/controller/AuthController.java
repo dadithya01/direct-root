@@ -4,6 +4,7 @@ import edu.example.backend.dto.AuthDTO;
 import edu.example.backend.dto.AuthResponseDTO;
 import edu.example.backend.dto.RegisterDTO;
 import edu.example.backend.service.AuthService;
+import edu.example.backend.service.impl.AuthServiceImpl;
 import edu.example.backend.util.APIResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,13 +13,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class AuthController {
-    private final AuthService authService;
+    private final AuthServiceImpl authServiceImpl;
 
     @PostMapping("/register")
     public ResponseEntity<APIResponse> register(@RequestBody RegisterDTO registerDTO) {
-        String token = authService.register(registerDTO);
+        String token = authServiceImpl.register(registerDTO);
         return ResponseEntity.ok(
                 APIResponse.builder()
                         .status(201)
@@ -30,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<APIResponse> signIn(@RequestBody AuthDTO authDTO) {
-        AuthResponseDTO token = authService.authenticate(authDTO);
+        AuthResponseDTO token = authServiceImpl.authenticate(authDTO);
         return ResponseEntity.ok(
                 APIResponse.builder()
                         .status(200)

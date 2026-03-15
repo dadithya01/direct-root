@@ -1,5 +1,5 @@
 package edu.example.backend.entity;
 
 public enum Role {
-    FARMER, BUSINESS, ADMIN
+    FARMER, BUYER, ADMIN
 }
