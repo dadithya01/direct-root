@@ -10,43 +10,14 @@ import {
   Loader2
 } from 'lucide-react';
 import AdminDashboard from './AdminDashboard';
+import LoadingScreen from './LoadingScreen';
+import FarmerDashboard from './FarmerDashboard';
+import BuyerDashboard from './BuyerDashboard';
 
-// --- API CONFIG ---
 const API_BASE_URL = "http://localhost:8080/api/v1";
 
-// ==========================================
-// 1. BOOT/LOADING SCREEN (Dark)
-// ==========================================
-const LoadingScreen = () => {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(prev => (prev < 100 ? prev + 4 : 100));
-    }, 30);
-    return () => clearInterval(interval);
-  }, []);
+<LoadingScreen />
 
-  return (
-    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white font-sans">
-      <div className="relative mb-12">
-        <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 animate-pulse" />
-        <div className="relative bg-slate-900 p-6 rounded-[2.5rem] border border-slate-700 shadow-2xl">
-          <Sprout size={64} className="text-blue-500 animate-bounce" />
-        </div>
-      </div>
-      <div className="w-full max-w-xs space-y-4">
-        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-500 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
-        </div>
-        <p className="text-[11px] font-mono text-slate-400 animate-pulse italic text-center tracking-widest uppercase">Syncing Handshake...</p>
-      </div>
-    </div>
-  );
-};
-
-// ==========================================
-// 2. MAIN APP (Dark Theme)
-// ==========================================
 export default function App() {
   const [isBooting, setIsBooting] = useState(true);
   const [view, setView] = useState('login'); 
@@ -101,11 +72,10 @@ export default function App() {
 
   if (isBooting) return <LoadingScreen />;
 
-  // ========================
-  // USER REDIRECTION
-  // ========================
   if (user) {
     if (user.role === 'ADMIN') return <AdminDashboard user={user} onLogout={handleLogout} />;
+    if (user.role === 'FARMER') return <FarmerDashboard user={user} onLogout={handleLogout} />;
+    if (user.role === 'BUYER') return <BuyerDashboard user={user} onLogout={handleLogout} />;
 
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center font-sans animate-in fade-in zoom-in duration-300">
@@ -124,30 +94,24 @@ export default function App() {
       </div>
     );
   }
-
-  // ========================
-  // LOGIN / REGISTER FORM
-  // ========================
   return (
     <div className="min-h-screen flex font-sans animate-in fade-in duration-700">
-      {/* Left Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 items-center justify-center p-20 relative overflow-hidden text-white">
         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-700/20 via-transparent to-transparent" />
         <div className="relative z-10 max-w-md">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/20">
             <Sprout size={32} />
           </div>
-          <h1 className="text-5xl font-black leading-tight mb-4 tracking-tighter">AgriNet <span className="text-blue-400">Node</span></h1>
-          <p className="text-slate-400 font-medium leading-relaxed italic">Yoga-7 Terminal: Ready for input.</p>
+          <h1 className="text-5xl font-black leading-tight mb-4 tracking-tighter">Direct<span className="text-blue-400">Root</span></h1>
+          <p className="text-slate-400 font-medium leading-relaxed italic">Ready for input.</p>
         </div>
       </div>
 
-      {/* Right Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-950 text-white">
         <div className="w-full max-w-md">
           <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-black mb-1 tracking-tight">{view === 'login' ? 'Authenticate' : 'Request Registry'}</h2>
-            <p className="text-slate-400 font-medium text-sm">Secure Agricultural Ledger Access</p>
+            <h2 className="text-3xl font-black mb-1 tracking-tight">{view === 'login' ? 'Signin' : 'Signup'}</h2>
+            <p className="text-slate-400 font-medium text-sm">Signin or Signup.</p>
           </div>
 
           {error && (
@@ -161,7 +125,7 @@ export default function App() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
               <div className="relative">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input name="username" required type="text" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
+                <input name="username" placeholder='Username...' required type="text" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
               </div>
             </div>
 
@@ -169,7 +133,7 @@ export default function App() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input name="password" required type="password" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
+                <input name="password" placeholder='Password...' required type="password" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
               </div>
             </div>
 
@@ -187,7 +151,7 @@ export default function App() {
             )}
 
             <button disabled={formLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2 mt-8 active:scale-95 disabled:opacity-50">
-              {formLoading ? <Loader2 className="animate-spin" size={18} /> : <>{view === 'login' ? 'Sign In' : 'Register'}</>}
+              {formLoading ? <Loader2 className="animate-spin" size={18} /> : <>{view === 'login' ? 'Sign In' : 'Signup'}</>}
             </button>
           </form>
 
