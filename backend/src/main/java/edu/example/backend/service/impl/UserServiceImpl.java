@@ -1,8 +1,10 @@
 package edu.example.backend.service.impl;
 
 import edu.example.backend.dto.UserDTO;
+import edu.example.backend.entity.ActivityLog;
 import edu.example.backend.entity.Role;
 import edu.example.backend.entity.User;
+import edu.example.backend.repository.ActivityLogRepository;
 import edu.example.backend.repository.UserRepository;
 import edu.example.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,6 +21,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
+    private final ActivityLogRepository activityLogRepository;
     @Override
     public List<UserDTO> getAllUsers() {
         List<User> users = userRepository.findAll();
@@ -40,5 +44,12 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.delete(targetUser);
+        activityLogRepository.save(ActivityLog.builder()
+                .username(targetUser.getUsername())
+                .action("User Deleted")
+                .role(targetUser.getRole())
+                .performedBy(currentUsername)
+                .timestamp(LocalDateTime.now())
+                .build());
     }
 }

@@ -3,7 +3,9 @@ package edu.example.backend.service.impl;
 import edu.example.backend.dto.AuthDTO;
 import edu.example.backend.dto.AuthResponseDTO;
 import edu.example.backend.dto.RegisterDTO;
+import edu.example.backend.entity.ActivityLog;
 import edu.example.backend.entity.User;
+import edu.example.backend.repository.ActivityLogRepository;
 import edu.example.backend.repository.UserRepository;
 import edu.example.backend.service.AuthService;
 import edu.example.backend.util.JwtService;
@@ -11,12 +13,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ActivityLogRepository activityLogRepository;
 
     public String register(RegisterDTO dto) {
         if(userRepository.findByUsername(dto.getUsername()).isPresent()) {
@@ -28,6 +33,14 @@ public class AuthServiceImpl implements AuthService {
                 .role(dto.getRole())
                 .build();
         userRepository.save(user);
+        ActivityLog activityLog = ActivityLog.builder()
+                .username(user.getUsername())
+                .action("User Registered")
+                .role(user.getRole())
+                .performedBy(user.getUsername())
+                .timestamp(LocalDateTime.now())
+                .build();
+        activityLogRepository.save(activityLog);
         return jwtService.generateToken(user.getUsername());
     }
 
