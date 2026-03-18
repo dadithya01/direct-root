@@ -2,12 +2,14 @@ package edu.example.backend.controller;
 
 import edu.example.backend.dto.AuthDTO;
 import edu.example.backend.dto.AuthResponseDTO;
+import edu.example.backend.dto.ChangePasswordDTO;
 import edu.example.backend.dto.RegisterDTO;
 import edu.example.backend.service.AuthService;
 import edu.example.backend.service.impl.AuthServiceImpl;
 import edu.example.backend.util.APIResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,5 +41,13 @@ public class AuthController {
                         .data(AuthResponseDTO.builder().token(token.getToken()).role(token.getRole()).build())
                         .build()
         );
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordDTO dto,
+            Authentication auth) {
+        authServiceImpl.changePassword(auth.getName(), dto.getCurrentPassword(), dto.getNewPassword());
+        return ResponseEntity.ok("Password changed successfully");
     }
 }
