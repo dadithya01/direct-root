@@ -1,163 +1,199 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Sprout, 
-  Lock, 
-  User as UserIcon, 
-  ChevronRight, 
-  ShieldCheck, 
-  ShoppingCart,
-  AlertTriangle,
-  Loader2
+import React, { useState } from 'react';
+import {
+  Sprout, Lock, User as UserIcon,
+  ShieldCheck, ShoppingCart, Wheat,
+  AlertTriangle, Loader2, Eye, EyeOff, ArrowRight,
 } from 'lucide-react';
-import AdminDashboard from './AdminDashboard';
-import LoadingScreen from './LoadingScreen';
-import FarmerDashboard from './FarmerDashboard';
-import BuyerDashboard from './BuyerDashboard';
 
 const API_BASE_URL = "http://localhost:8080/api/v1";
 
-<LoadingScreen />
+const M3 = {
+  bg:          '#0f1117',
+  surface:     '#1a1d27',
+  surfaceVar:  '#1f2230',
+  outline:     '#2e3150',
+  outlineVar:  '#252840',
+  primary:     '#c3c6ff',
+  primaryCont: '#4a4fa8',
+  error:       '#ffb4ab',
+  errorCont:   '#930006',
+  green:       '#6ddc91',
+  text:        '#f0f0ff',
+  textMed:     '#c4c4e0',
+  textLow:     '#8e8eaa',
+};
 
-export default function App() {
-  const [isBooting, setIsBooting] = useState(true);
-  const [view, setView] = useState('login'); 
-  const [role, setRole] = useState('FARMER'); 
-  const [user, setUser] = useState(null); 
-  const [error, setError] = useState("");
+const ROLES = [
+  { value: 'FARMER', label: 'Farmer',        icon: Wheat,        color: '#34d399', cont: '#064e3b' },
+  { value: 'BUYER',  label: 'Buyer',          icon: ShoppingCart, color: '#7dd3fc', cont: '#0c4a6e' },
+  { value: 'ADMIN',  label: 'Administrator',  icon: ShieldCheck,  color: '#c3c6ff', cont: '#4a4fa8' },
+];
+
+const AuthInput = ({ icon: Icon, label, name, type = 'text', placeholder, value, onChange, rightEl }) => (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</label>
+    <div style={{ position: 'relative' }}>
+      <Icon size={15} color={M3.textLow} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+      <input name={name} type={type} placeholder={placeholder} value={value} onChange={onChange} required
+        style={{ width: '100%', padding: '13px 44px 13px 42px', borderRadius: 14, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, color: M3.text, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+        onFocus={e => e.target.style.borderColor = M3.primary}
+        onBlur={e => e.target.style.borderColor = M3.outline}
+      />
+      {rightEl && <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' }}>{rightEl}</div>}
+    </div>
+  </div>
+);
+
+// ── onSuccess is called with user object when login/register succeeds ──
+// ── App.jsx handles routing after that ──
+export default function LoginRegister({ onSuccess }) {
+  const [view, setView]               = useState('login');
+  const [role, setRole]               = useState('FARMER');
+  const [error, setError]             = useState('');
   const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [showPw, setShowPw]           = useState(false);
+  const [formData, setFormData]       = useState({ username: '', password: '' });
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsBooting(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handleLogout = () => { setUser(null); setView('login'); };
+  const handleChange = (e) => setFormData(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleAuth = async (e) => {
     e.preventDefault();
-    setFormLoading(true);
-    setError("");
-
+    setFormLoading(true); setError('');
     const endpoint = view === 'login' ? '/signin' : '/register';
-    const payload = view === 'login' 
+    const payload  = view === 'login'
       ? { username: formData.username, password: formData.password }
       : { username: formData.username, password: formData.password, role };
-
     try {
-      const response = await fetch(`${API_BASE_URL}/auth${endpoint}`, {
+      const res    = await fetch(`${API_BASE_URL}/auth${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
       });
-
-      if (response.status === 403) throw new Error("403 Forbidden");
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setUser({
-          username: formData.username,
-          role: result.data?.role || role,
-          token: result.data?.token
-        });
+      const result = await res.json();
+      if (res.ok) {
+        // Hand user back to App.jsx — no routing here
+        onSuccess({ username: formData.username, role: result.data?.role || role, token: result.data?.token });
       } else {
-        setError(result.message || "Authentication failed.");
+        setError(result.message || 'Authentication failed.');
       }
-    } catch (err) {
-      setError(err.message.includes("403") ? err.message : "Network error. Is Spring Boot running?");
-    } finally { setFormLoading(false); }
+    } catch { setError('Network error. Is Spring Boot running?'); }
+    finally { setFormLoading(false); }
   };
 
-  if (isBooting) return <LoadingScreen />;
+  const selectedRole = ROLES.find(r => r.value === role);
 
-  if (user) {
-    if (user.role === 'ADMIN') return <AdminDashboard user={user} onLogout={handleLogout} />;
-    if (user.role === 'FARMER') return <FarmerDashboard user={user} onLogout={handleLogout} />;
-    if (user.role === 'BUYER') return <BuyerDashboard user={user} onLogout={handleLogout} />;
-
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center font-sans animate-in fade-in zoom-in duration-300">
-        <div className="bg-slate-900 p-12 rounded-[3rem] shadow-2xl border border-slate-800 max-w-lg text-white">
-          <div className="bg-blue-900/20 p-6 rounded-3xl mb-8 inline-block">
-            {user.role === 'FARMER' ? <Sprout size={48} /> : <ShoppingCart size={48} />}
-          </div>
-          <h1 className="text-4xl font-black mb-4 tracking-tight">System Access Granted</h1>
-          <p className="text-slate-300 font-medium leading-relaxed mb-10">
-            Welcome, <span className="font-bold">{user.username}</span>. You are logged in as a <span className="font-black text-blue-400 uppercase tracking-widest text-xs px-2 py-1 bg-blue-900/20 rounded-lg">{user.role}</span>.
-          </p>
-          <button onClick={handleLogout} className="w-full py-4 bg-blue-700 hover:bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all">
-            Disconnect Session
-          </button>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className="min-h-screen flex font-sans animate-in fade-in duration-700">
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-900 items-center justify-center p-20 relative overflow-hidden text-white">
-        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-700/20 via-transparent to-transparent" />
-        <div className="relative z-10 max-w-md">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/20">
-            <Sprout size={32} />
+    <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans','Roboto',system-ui,sans-serif", color: M3.text }}>
+
+      {/* Left decorative panel */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', background: M3.surface, borderRight: `1px solid ${M3.outline}`, padding: 60 }}>
+        <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, borderRadius: '50%', background: `${M3.primaryCont}22`, filter: 'blur(80px)' }} />
+        <div style={{ position: 'absolute', bottom: -80, left: -80, width: 300, height: 300, borderRadius: '50%', background: `#34d39911`, filter: 'blur(60px)' }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 380 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 48 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: `linear-gradient(135deg,${M3.primaryCont},#6366f1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 1px ${M3.primary}44,0 8px 24px ${M3.primary}22` }}>
+              <Sprout size={24} color={M3.primary} />
+            </div>
+            <div>
+              <p style={{ fontSize: 22, fontWeight: 900, color: M3.text }}>Direct<span style={{ color: M3.primary }}>Root</span></p>
+              <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>Agricultural Marketplace</p>
+            </div>
           </div>
-          <h1 className="text-5xl font-black leading-tight mb-4 tracking-tighter">Direct<span className="text-blue-400">Root</span></h1>
-          <p className="text-slate-400 font-medium leading-relaxed italic">Ready for input.</p>
+          <h2 style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.8px', marginBottom: 20, color: M3.text }}>
+            Farm Fresh,<br /><span style={{ color: M3.green }}>Direct to You</span>
+          </h2>
+          <p style={{ fontSize: 14, color: M3.textLow, lineHeight: 1.7, marginBottom: 40 }}>
+            Connecting local farmers with buyers, cutting out middlemen and ensuring fresh produce at fair prices.
+          </p>
+          {[
+            { icon: Wheat,        color: '#34d399',  label: 'Farmers list fresh produce directly' },
+            { icon: ShoppingCart, color: '#7dd3fc',  label: 'Buyers shop from local farms' },
+            { icon: ShieldCheck,  color: M3.primary, label: 'Secure and transparent platform' },
+          ].map(({ icon: Icon, color, label }, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: `${color}18`, border: `1px solid ${color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={14} color={color} />
+              </div>
+              <p style={{ fontSize: 13, color: M3.textMed }}>{label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-950 text-white">
-        <div className="w-full max-w-md">
-          <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-black mb-1 tracking-tight">{view === 'login' ? 'Signin' : 'Signup'}</h2>
-            <p className="text-slate-400 font-medium text-sm">Signin or Signup.</p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-900/20 border border-red-700 text-red-400 rounded-xl flex gap-3 text-xs font-bold items-center">
-              <AlertTriangle size={16} className="shrink-0" /> {error}
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input name="username" placeholder='Username...' required type="text" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
-              </div>
+      {/* Right form panel */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 32 }}>
+            <div style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: M3.text, letterSpacing: '-0.5px' }}>
+                {view === 'login' ? 'Welcome back' : 'Create account'}
+              </h2>
+              <p style={{ fontSize: 13, color: M3.textLow, marginTop: 6 }}>
+                {view === 'login' ? 'Sign in to your DirectRoot account' : 'Join the DirectRoot marketplace'}
+              </p>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input name="password" placeholder='Password...' required type="password" className="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 font-medium text-white placeholder:text-slate-400 transition-all" onChange={handleChange} />
-              </div>
-            </div>
-
-            {view === 'register' && (
-              <div className="pt-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Select Profile</p>
-                <div className="grid grid-cols-3 gap-2">
-                   {['FARMER', 'BUYER', 'ADMIN'].map((r) => (
-                     <button key={r} type="button" onClick={() => setRole(r)} className={`py-4 rounded-xl border-2 text-[9px] font-black uppercase transition-all flex flex-col items-center gap-1 ${role === r ? 'border-blue-400 bg-blue-900/20 text-blue-400 shadow-sm' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>
-                       {r}
-                     </button>
-                   ))}
-                </div>
+            {error && (
+              <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 12, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
+                <AlertTriangle size={14} /> {error}
               </div>
             )}
 
-            <button disabled={formLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2 mt-8 active:scale-95 disabled:opacity-50">
-              {formLoading ? <Loader2 className="animate-spin" size={18} /> : <>{view === 'login' ? 'Sign In' : 'Signup'}</>}
-            </button>
-          </form>
+            <form onSubmit={handleAuth}>
+              <AuthInput icon={UserIcon} label="Username" name="username" placeholder="Enter your username" value={formData.username} onChange={handleChange} />
+              <AuthInput icon={Lock} label="Password" name="password" type={showPw ? 'text' : 'password'} placeholder="Enter your password" value={formData.password} onChange={handleChange}
+                rightEl={
+                  <button type="button" onClick={() => setShowPw(s => !s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: M3.textLow, display: 'flex' }}>
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                }
+              />
 
-          <button onClick={() => setView(view === 'login' ? 'register' : 'login')} className="mt-8 w-full text-center text-blue-400 font-black text-xs hover:underline tracking-tight uppercase">
-            {view === 'login' ? "New Operator? Request Access" : "Existing Node? Login"}
-          </button>
+              {view === 'register' && (
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Select Role</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                    {ROLES.map(({ value, label, icon: Icon, color, cont }) => {
+                      const active = role === value;
+                      return (
+                        <button key={value} type="button" onClick={() => setRole(value)} style={{ padding: '14px 10px', borderRadius: 14, border: `1px solid ${active ? color + '66' : M3.outline}`, background: active ? `${cont}88` : M3.surfaceVar, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, transition: 'all 0.15s' }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 9, background: active ? `${color}22` : M3.outlineVar, border: `1px solid ${active ? color + '44' : M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon size={14} color={active ? color : M3.textLow} />
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: active ? color : M3.textLow }}>{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedRole && (
+                    <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 12, background: `${selectedRole.color}0f`, border: `1px solid ${selectedRole.color}22`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <selectedRole.icon size={13} color={selectedRole.color} />
+                      <p style={{ fontSize: 12, color: selectedRole.color, fontWeight: 600 }}>
+                        {selectedRole.value === 'FARMER' && 'You will be able to list and manage your products.'}
+                        {selectedRole.value === 'BUYER'  && 'You will be able to browse and purchase products.'}
+                        {selectedRole.value === 'ADMIN'  && 'You will have full platform management access.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button type="submit" disabled={formLoading} style={{ width: '100%', padding: '14px', borderRadius: 14, marginTop: 8, background: formLoading ? M3.outlineVar : M3.primaryCont, border: `1px solid ${M3.primary}44`, color: M3.primary, fontSize: 14, fontWeight: 700, cursor: formLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {formLoading
+                  ? <><Loader2 size={16} className="animate-spin" />{view === 'login' ? 'Signing in...' : 'Creating account...'}</>
+                  : <>{view === 'login' ? 'Sign In' : 'Create Account'} <ArrowRight size={16} /></>
+                }
+              </button>
+            </form>
+          </div>
+
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <span style={{ fontSize: 13, color: M3.textLow }}>{view === 'login' ? "Don't have an account? " : 'Already have an account? '}</span>
+            <button onClick={() => { setView(view === 'login' ? 'register' : 'login'); setError(''); setFormData({ username: '', password: '' }); }}
+              style={{ fontSize: 13, fontWeight: 700, color: M3.primary, background: 'none', border: 'none', cursor: 'pointer' }}>
+              {view === 'login' ? 'Sign up' : 'Sign in'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
