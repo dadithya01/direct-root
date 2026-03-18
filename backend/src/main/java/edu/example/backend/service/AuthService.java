@@ -8,4 +8,5 @@ public interface AuthService {
     String register(RegisterDTO registerDTO);
     AuthResponseDTO authenticate(AuthDTO authDTO);
     void changePassword(String username, String currentPassword, String newPassword);
+    void deleteAccount(String username);
 }

@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByFarmerUsername(String farmerUsername);
+    void deleteByFarmerUsername(String farmerUsername);
 }

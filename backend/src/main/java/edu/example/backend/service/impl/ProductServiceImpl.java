@@ -46,4 +46,32 @@ public class ProductServiceImpl implements ProductService {
                 .map(p -> modelMapper.map(p, ProductDTO.class))
                 .toList();
     }
+
+    @Override
+    public ProductDTO updateProduct(Long id, ProductDTO dto, String farmerUsername) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        if (!product.getFarmerUsername().equals(farmerUsername))
+            throw new RuntimeException("Not your product");
+        product.setName(dto.getName());
+        product.setCategory(dto.getCategory());
+        product.setPrice(dto.getPrice());
+        product.setQuantity(dto.getQuantity());
+        product.setDescription(dto.getDescription());
+        return modelMapper.map(productRepository.save(product), ProductDTO.class);
+    }
+
+    @Override
+    public void deleteProduct(Long id, String farmerUsername) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        if (!product.getFarmerUsername().equals(farmerUsername)) {
+            throw new RuntimeException("You can only delete your own products");
+        }
+
+        productRepository.delete(product);
+    }
+
+
 }

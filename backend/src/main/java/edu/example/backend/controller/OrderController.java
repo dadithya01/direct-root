@@ -48,4 +48,14 @@ public class OrderController {
                         .build()
         );
     }
+
+    @GetMapping("/farmer")
+    public ResponseEntity<APIResponse> getMyFarmerOrders(Authentication auth) {
+        List<OrderDTO> orders = orderService.getOrdersByFarmer(auth.getName());
+        return ResponseEntity.ok(APIResponse.builder()
+                .status(200)
+                .message("Farmer orders loaded")
+                .data(orders)
+                .build());
+    }
 }

@@ -68,4 +68,28 @@ public class ProductController {
                         .build()
         );
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse> updateProduct(
+            @PathVariable Long id,
+            @RequestBody ProductDTO dto,
+            Authentication auth) {
+        ProductDTO updated = productService.updateProduct(id, dto, auth.getName());
+        return ResponseEntity.ok(APIResponse.builder()
+                .status(200).message("Product updated").data(updated).build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse> deleteProduct(
+            @PathVariable Long id,
+            Authentication auth) {
+        productService.deleteProduct(id, auth.getName());
+        return ResponseEntity.ok(
+                APIResponse.builder()
+                        .status(200)
+                        .message("Product deleted successfully")
+                        .data(null)
+                        .build()
+        );
+    }
 }

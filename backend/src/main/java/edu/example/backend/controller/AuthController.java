@@ -4,6 +4,8 @@ import edu.example.backend.dto.AuthDTO;
 import edu.example.backend.dto.AuthResponseDTO;
 import edu.example.backend.dto.ChangePasswordDTO;
 import edu.example.backend.dto.RegisterDTO;
+import edu.example.backend.entity.User;
+import edu.example.backend.repository.UserRepository;
 import edu.example.backend.service.AuthService;
 import edu.example.backend.service.impl.AuthServiceImpl;
 import edu.example.backend.util.APIResponse;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class AuthController {
     private final AuthServiceImpl authServiceImpl;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<APIResponse> register(@RequestBody RegisterDTO registerDTO) {
@@ -49,5 +52,17 @@ public class AuthController {
             Authentication auth) {
         authServiceImpl.changePassword(auth.getName(), dto.getCurrentPassword(), dto.getNewPassword());
         return ResponseEntity.ok("Password changed successfully");
+    }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(Authentication auth) {
+        authServiceImpl.deleteAccount(auth.getName());
+        return ResponseEntity.ok(
+                APIResponse.builder()
+                        .status(200)
+                        .message("Account deleted successfully")
+                        .data(null)
+                        .build()
+        );
     }
 }

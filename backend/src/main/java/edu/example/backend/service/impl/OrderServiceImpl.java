@@ -94,4 +94,12 @@ public class OrderServiceImpl implements OrderService {
         dto.setItems(itemDTOs);
         return dto;
     }
+
+    @Override
+    public List<OrderDTO> getOrdersByFarmer(String farmerUsername) {
+        return orderRepository.findOrdersByFarmerUsername(farmerUsername)
+                .stream()
+                .map(this::mapOrderToDTO)
+                .toList();
+    }
 }

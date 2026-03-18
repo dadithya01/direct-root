@@ -8,4 +8,6 @@ public interface ProductService {
     ProductDTO addProduct(ProductDTO dto, String farmerUsername);
     List<ProductDTO> getAllProducts();
     List<ProductDTO> getMyProducts(String farmerUsername);
+    ProductDTO updateProduct(Long id, ProductDTO dto, String farmerUsername);
+    void deleteProduct(Long id, String farmerUsername);
 }
