@@ -2,143 +2,215 @@ import React, { useState, useEffect } from 'react';
 import {
   Sprout, LogOut, ShoppingCart, Store, ClipboardList,
   Loader2, AlertCircle, CheckCircle, X, Plus, Minus,
-  Trash2, ShoppingBag, RefreshCw, Search,
+  Trash2, ShoppingBag, RefreshCw, Search, ChevronRight,
+  Package, TrendingUp, ArrowUpRight, BarChart3, Settings,
+  Lock, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from 'recharts';
 
 const API_BASE_URL = "http://localhost:8080/api/v1";
 
-const BuyerDashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('shop');
-  const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [cart, setCart] = useState([]); // { product, quantity }
-  const [isLoading, setIsLoading] = useState(false);
+const M3 = {
+  bg:          '#0f1117',
+  surface:     '#1a1d27',
+  surfaceVar:  '#1f2230',
+  outline:     '#2e3150',
+  outlineVar:  '#252840',
+  primary:     '#c3c6ff',
+  primaryCont: '#4a4fa8',
+  error:       '#ffb4ab',
+  errorCont:   '#930006',
+  green:       '#6ddc91',
+  greenCont:   '#003917',
+  yellow:      '#f5c518',
+  text:        '#f0f0ff',
+  textMed:     '#c4c4e0',
+  textLow:     '#8e8eaa',
+  // Buyer accent — sky blue
+  buyer:       '#7dd3fc',
+  buyerCont:   '#0c4a6e',
+  buyerDark:   '#082f49',
+};
+
+const catStyle = (cat) => {
+  const map = {
+    vegetables: { bg: '#14532d', color: '#86efac', border: '#166534' },
+    fruits:     { bg: '#7c2d12', color: '#fdba74', border: '#9a3412' },
+    grains:     { bg: '#713f12', color: '#fde047', border: '#854d0e' },
+    dairy:      { bg: '#1e3a5f', color: '#93c5fd', border: '#1e40af' },
+    meat:       { bg: '#7f1d1d', color: '#fca5a5', border: '#991b1b' },
+    other:      { bg: '#2e3150', color: M3.textMed, border: M3.outline },
+  };
+  return map[cat?.toLowerCase()] || map.other;
+};
+
+const CatChip = ({ category }) => {
+  const s = catStyle(category);
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '3px 10px', borderRadius: 999,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+    }}>
+      {category || 'N/A'}
+    </span>
+  );
+};
+
+// ── Outside component to prevent focus loss ──
+const BuyerPwInput = ({ label, placeholder, value, onChange, show, onToggleShow }) => (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</label>
+    <div style={{ position: 'relative' }}>
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%', padding: '11px 40px 11px 14px', borderRadius: 12,
+          background: M3.surfaceVar, border: `1px solid ${M3.outline}`,
+          color: M3.text, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+        }}
+        onFocus={e => e.target.style.borderColor = M3.buyer}
+        onBlur={e => e.target.style.borderColor = M3.outline}
+      />
+      <button type="button" onClick={onToggleShow} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: M3.textLow }}>
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+    </div>
+  </div>
+);
+
+export default function BuyerDashboard({ user, onLogout }) {
+  const [activeTab, setActiveTab]       = useState('shop');
+  const [products, setProducts]         = useState([]);
+  const [orders, setOrders]             = useState([]);
+  const [cart, setCart]                 = useState([]);
+  const [isLoading, setIsLoading]       = useState(false);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError]               = useState(null);
+  const [success, setSuccess]           = useState(null);
+  const [searchQuery, setSearchQuery]   = useState('');
+
+  // Settings state
+  const [pwForm, setPwForm]             = useState({ current: '', newPw: '', confirm: '' });
+  const [showPw, setShowPw]             = useState({ current: false, newPw: false, confirm: false });
+  const [pwError, setPwError]           = useState(null);
+  const [pwSuccess, setPwSuccess]       = useState(null);
+  const [isPwLoading, setIsPwLoading]   = useState(false);
 
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/products`, {
+      const res = await fetch(`${API_BASE_URL}/products`, {
         headers: { Authorization: `Bearer ${user?.token}` },
       });
-      const result = await response.json();
+      const result = await res.json();
       setProducts(Array.isArray(result) ? result : result.data || []);
-    } catch (err) {
-      setError('Failed to load products.');
-    } finally {
-      setIsLoading(false);
-    }
+    } catch { setError('Failed to load products.'); }
+    finally { setIsLoading(false); }
   };
 
   const fetchMyOrders = async () => {
     setIsOrdersLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/my`, {
+      const res = await fetch(`${API_BASE_URL}/orders/my`, {
         headers: { Authorization: `Bearer ${user?.token}` },
       });
-      const result = await response.json();
+      const result = await res.json();
       setOrders(Array.isArray(result) ? result : result.data || []);
-    } catch (err) {
-      setError('Failed to load orders.');
-    } finally {
-      setIsOrdersLoading(false);
-    }
+    } catch { setError('Failed to load orders.'); }
+    finally { setIsOrdersLoading(false); }
   };
 
-  useEffect(() => {
-    fetchProducts();
-    fetchMyOrders();
-  }, []);
+  useEffect(() => { fetchProducts(); fetchMyOrders(); }, []);
 
-  // ── CART HELPERS ──
   const addToCart = (product) => {
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.quantity) return prev; // max stock
-        return prev.map(i => i.product.id === product.id
-          ? { ...i, quantity: i.quantity + 1 } : i);
+        if (existing.quantity >= product.quantity) return prev;
+        return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
       return [...prev, { product, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (productId) => {
-    setCart(prev => prev.filter(i => i.product.id !== productId));
-  };
+  const removeFromCart = (productId) => setCart(prev => prev.filter(i => i.product.id !== productId));
 
   const updateQty = (productId, delta) => {
-    setCart(prev => prev
-      .map(i => {
-        if (i.product.id !== productId) return i;
-        const newQty = i.quantity + delta;
-        if (newQty <= 0) return null;
-        if (newQty > i.product.quantity) return i;
-        return { ...i, quantity: newQty };
-      })
-      .filter(Boolean)
-    );
+    setCart(prev => prev.map(i => {
+      if (i.product.id !== productId) return i;
+      const newQty = i.quantity + delta;
+      if (newQty <= 0) return null;
+      if (newQty > i.product.quantity) return i;
+      return { ...i, quantity: newQty };
+    }).filter(Boolean));
   };
 
-  const cartTotal = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotal = cart.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+  const getCartQty = (productId) => cart.find(i => i.product.id === productId)?.quantity || 0;
 
-  const getCartQty = (productId) => {
-    return cart.find(i => i.product.id === productId)?.quantity || 0;
-  };
-
-  // ── CHECKOUT ──
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    setIsCheckingOut(true);
-    setError(null);
-    setSuccess(null);
+    setIsCheckingOut(true); setError(null); setSuccess(null);
     try {
-      const orderItems = cart.map(i => {
-        const productId = i.product.id ?? i.product.productId;
-        console.log('product object:', i.product); // ← see what fields exist
-        console.log('productId being sent:', productId);
-        return { productId, quantity: i.quantity };
-      });
-
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const orderItems = cart.map(i => ({
+        productId: i.product.id ?? i.product.productId,
+        quantity: i.quantity,
+      }));
+      const res = await fetch(`${API_BASE_URL}/orders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user?.token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
         body: JSON.stringify({ items: orderItems }),
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Order failed.');
-      }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Order failed.'); }
       setSuccess('Order placed successfully!');
       setCart([]);
-      fetchProducts();
-      fetchMyOrders();
+      fetchProducts(); fetchMyOrders();
       setTimeout(() => setActiveTab('orders'), 1200);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsCheckingOut(false);
-    }
-};
+    } catch (err) { setError(err.message); }
+    finally { setIsCheckingOut(false); }
+  };
 
-  const getCategoryColor = (category) => {
-    const map = {
-      vegetables: 'bg-green-900/20 text-green-400 border-green-700',
-      fruits: 'bg-orange-900/20 text-orange-400 border-orange-700',
-      grains: 'bg-yellow-900/20 text-yellow-400 border-yellow-700',
-      dairy: 'bg-blue-900/20 text-blue-400 border-blue-700',
-      meat: 'bg-red-900/20 text-red-400 border-red-700',
-      other: 'bg-slate-700/40 text-slate-400 border-slate-600',
-    };
-    return map[category?.toLowerCase()] || 'bg-slate-700/40 text-slate-400 border-slate-600';
+  const handleChangePassword = async () => {
+    setPwError(null); setPwSuccess(null);
+    if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) { setPwError('All fields are required.'); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwError('New passwords do not match.'); return; }
+    if (pwForm.newPw.length < 6) { setPwError('Min. 6 characters required.'); return; }
+    if (pwForm.current === pwForm.newPw) { setPwError('New password must be different.'); return; }
+    setIsPwLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }),
+      });
+      if (!res.ok) throw new Error('Current password is incorrect.');
+      setPwSuccess('Password changed! Signing out...');
+      setPwForm({ current: '', newPw: '', confirm: '' });
+      setTimeout(() => onLogout(), 2000);
+    } catch (e) { setPwError(e.message); }
+    finally { setIsPwLoading(false); }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm(`Delete your account "${user?.username}"? This is permanent.`)) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      if (!res.ok) throw new Error('Failed to delete account.');
+      onLogout();
+    } catch (e) { setError(e.message); }
   };
 
   const filteredProducts = products.filter(p =>
@@ -147,388 +219,778 @@ const BuyerDashboard = ({ user, onLogout }) => {
     p.farmerUsername?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="min-h-screen bg-slate-900 flex font-sans text-slate-100">
+  const totalSpent = orders.reduce((s, o) => s + (o.totalPrice || 0), 0);
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-800 flex flex-col fixed h-full shadow-2xl z-20">
-        <div className="p-6 flex items-center gap-3 border-b border-slate-700">
-          <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-            <Sprout size={24} />
+  // ── Analytics data ──
+  const allItems = orders.flatMap(o => o.items || []);
+
+  // Most purchased products
+  const productMap = allItems.reduce((acc, i) => {
+    acc[i.productName] = (acc[i.productName] || 0) + (i.quantity || 0);
+    return acc;
+  }, {});
+  const topProducts = Object.entries(productMap)
+    .map(([name, units]) => ({ name, units }))
+    .sort((a, b) => b.units - a.units)
+    .slice(0, 6);
+
+  // Spending by category — map through products to get categories
+  const catSpendMap = allItems.reduce((acc, item) => {
+    const product = products.find(p => p.name === item.productName);
+    const cat = product?.category || 'Other';
+    acc[cat] = (acc[cat] || 0) + (item.priceAtPurchase || 0) * (item.quantity || 0);
+    return acc;
+  }, {});
+  const categorySpendData = Object.entries(catSpendMap)
+    .map(([name, amount]) => ({ name, amount: parseFloat(amount.toFixed(2)) }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const DONUT_COLORS = ['#7dd3fc', '#6ddc91', '#c3c6ff', '#f5c518', '#ffb4ab', '#fdba74'];
+
+  const ChartTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 10, padding: '8px 12px' }}>
+        {label && <p style={{ fontSize: 11, color: M3.textLow, marginBottom: 3 }}>{label}</p>}
+        {payload.map((p, i) => (
+          <p key={i} style={{ fontSize: 13, fontWeight: 700, color: p.color || M3.buyer }}>
+            {p.name}: {typeof p.value === 'number' && p.name?.toLowerCase().includes('amount') ? `$${p.value}` : p.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const nav = [
+    { tab: 'shop',      icon: Store,        label: 'Shop' },
+    { tab: 'orders',    icon: ClipboardList, label: 'My Orders' },
+    { tab: 'analytics', icon: BarChart3,    label: 'Analytics' },
+    { tab: 'settings',  icon: Settings,     label: 'Settings' },
+  ];
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans', 'Roboto', system-ui, sans-serif", color: M3.text }}>
+
+      {/* ── Sidebar ── */}
+      <aside style={{ width: 256, background: M3.surface, borderRight: `1px solid ${M3.outline}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 20 }}>
+        {/* Logo */}
+        <div style={{ padding: '28px 20px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${M3.buyerCont}, #0369a1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 1px ${M3.buyer}44, 0 4px 12px #0369a144` }}>
+              <Sprout size={20} color={M3.buyer} />
+            </div>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>DirectRoot</p>
+              <p style={{ fontSize: 11, color: M3.buyer, fontWeight: 600, marginTop: 1 }}>Buyer Portal</p>
+            </div>
           </div>
-          <span className="font-black tracking-tight text-xl">
-            Direct Root
-            <span className="text-blue-400 text-[10px] block font-mono">BUYER_ACCESS</span>
-          </span>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1.5 mt-4">
-          {[
-            { tab: 'shop',   icon: Store,         label: 'Shop' },
-            { tab: 'orders', icon: ClipboardList,  label: 'My Orders' },
-          ].map(({ tab, icon: Icon, label }) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
-                  : 'text-slate-400 hover:bg-slate-700 hover:text-white'
-              }`}
-            >
-              <Icon size={18} />
-              <span className="font-bold text-sm">{label}</span>
-            </button>
-          ))}
+        {/* Nav */}
+        <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 8px', marginBottom: 6 }}>Menu</p>
+          {nav.map(({ tab, icon: Icon, label }) => {
+            const active = activeTab === tab;
+            return (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                padding: '13px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: active ? `${M3.buyer}18` : 'transparent',
+                color: active ? M3.buyer : M3.textMed,
+                fontSize: 14, fontWeight: active ? 700 : 500,
+                borderLeft: active ? `2px solid ${M3.buyer}` : '2px solid transparent',
+                transition: 'all 0.15s', textAlign: 'left',
+              }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = M3.outlineVar; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Icon size={18} /><span>{label}</span>
+                {active && <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.6 }} />}
+              </button>
+            );
+          })}
+
+          {/* Quick stats */}
+          <div style={{ marginTop: 12, padding: 16, borderRadius: 16, background: M3.outlineVar, border: `1px solid ${M3.outline}` }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>My Stats</p>
+            {[
+              { label: 'Orders Placed', value: orders.length,           color: M3.buyer },
+              { label: 'Total Spent',   value: `$${totalSpent.toFixed(2)}`, color: M3.green },
+              { label: 'In Cart',       value: cartCount,               color: M3.yellow },
+            ].map((s, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: i < 2 ? 10 : 0 }}>
+                <span style={{ fontSize: 12, color: M3.textLow }}>{s.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: s.color }}>{s.value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Cart mini panel */}
+          {cart.length > 0 && (
+            <div style={{ marginTop: 12, borderRadius: 16, background: `${M3.buyer}10`, border: `1px solid ${M3.buyer}33`, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${M3.buyer}22`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, color: M3.buyer }}>
+                  <ShoppingCart size={13} /> Cart ({cartCount})
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: M3.green }}>${cartTotal.toFixed(2)}</span>
+              </div>
+              <div style={{ padding: '8px 16px', maxHeight: 100, overflowY: 'auto' }}>
+                {cart.map(i => (
+                  <div key={i.product.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: M3.textLow, marginBottom: 4 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>{i.product.name}</span>
+                    <span style={{ fontWeight: 700, color: M3.textMed }}>×{i.quantity}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '10px 12px', borderTop: `1px solid ${M3.buyer}22` }}>
+                <button onClick={handleCheckout} disabled={isCheckingOut} style={{ width: '100%', padding: '9px', borderRadius: 10, background: M3.buyerCont, border: `1px solid ${M3.buyer}44`, color: M3.buyer, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {isCheckingOut ? <Loader2 size={12} className="animate-spin" /> : <ShoppingBag size={12} />}
+                  {isCheckingOut ? 'Placing...' : 'Checkout'}
+                </button>
+              </div>
+            </div>
+          )}
         </nav>
 
-        {/* Cart Summary in Sidebar */}
-        {cart.length > 0 && (
-          <div className="mx-4 mb-4 bg-blue-900/20 border border-blue-700/40 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-blue-400 font-black text-sm">
-                <ShoppingCart size={16} />
-                Cart ({cartCount})
-              </div>
-              <span className="text-emerald-400 font-black text-sm">${cartTotal.toFixed(2)}</span>
+        {/* User */}
+        <div style={{ marginTop: 'auto', padding: '16px 12px', borderTop: `1px solid ${M3.outlineVar}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: M3.outlineVar, marginBottom: 8, border: `1px solid ${M3.outline}` }}>
+            <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg, ${M3.buyerCont}, #0369a1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: M3.buyer }}>
+              {user?.username?.substring(0, 2).toUpperCase() || 'BU'}
             </div>
-            <div className="space-y-1 max-h-32 overflow-y-auto mb-3">
-              {cart.map(i => (
-                <div key={i.product.id} className="flex justify-between text-[10px] text-slate-400">
-                  <span className="truncate max-w-[120px]">{i.product.name}</span>
-                  <span>x{i.quantity}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={handleCheckout}
-              disabled={isCheckingOut}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2"
-            >
-              {isCheckingOut ? <Loader2 size={14} className="animate-spin" /> : <ShoppingBag size={14} />}
-              {isCheckingOut ? 'Placing...' : 'Checkout'}
-            </button>
-          </div>
-        )}
-
-        <div className="p-4 border-t border-slate-700">
-          <div className="bg-slate-700/40 rounded-2xl p-4 mb-4 border border-slate-700">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center text-xs font-black">
-                {user?.username?.substring(0, 2).toUpperCase() || 'BU'}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-black truncate">{user?.username || 'Buyer'}</p>
-                <p className="text-[10px] text-blue-400 font-mono">BUYER</p>
-              </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: M3.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username || 'Buyer'}</p>
+              <p style={{ fontSize: 11, color: M3.buyer }}>Buyer</p>
             </div>
           </div>
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all font-bold text-sm group"
+          <button onClick={onLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'transparent', color: M3.error, fontSize: 13, fontWeight: 600 }}
+            onMouseEnter={e => e.currentTarget.style.background = `${M3.errorCont}66`}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
-            Sign Out
+            <LogOut size={16} /> Sign out
           </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 ml-64 p-8">
-        <header className="flex items-center justify-between mb-10">
+      {/* ── Main ── */}
+      <main style={{ flex: 1, marginLeft: 256 }}>
+
+        {/* Topbar */}
+        <header style={{ background: `${M3.surface}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${M3.outline}`, padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
-            <h1 className="text-4xl font-black tracking-tight">
-              {activeTab === 'shop' ? 'Marketplace' : 'My Orders'}
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>
+              {activeTab === 'shop' ? 'Marketplace' : activeTab === 'orders' ? 'My Orders' : activeTab === 'analytics' ? 'Analytics' : 'Settings'}
             </h1>
-            <p className="text-slate-400 font-medium mt-1">
-              {activeTab === 'shop'
-                ? `${filteredProducts.length} products available from farmers.`
-                : `You have placed ${orders.length} order${orders.length !== 1 ? 's' : ''}.`}
+            <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>
+              {activeTab === 'shop' ? `${filteredProducts.length} products available` : activeTab === 'orders' ? `${orders.length} order${orders.length !== 1 ? 's' : ''} placed` : activeTab === 'analytics' ? 'Your purchase overview' : 'Manage your account'}
             </p>
           </div>
-          {activeTab === 'shop' && (
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-400 transition-colors" size={16} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="pl-11 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 transition-all w-64 font-medium text-slate-200 placeholder:text-slate-500"
-                />
-              </div>
-              <button
-                onClick={fetchProducts}
-                className="p-3 bg-slate-800 border border-slate-700 rounded-2xl text-slate-400 hover:text-blue-400 transition-all"
-              >
-                <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-              </button>
-              {cart.length > 0 && (
-                <button
-                  onClick={() => setActiveTab('shop')}
-                  className="relative p-3 bg-blue-600 rounded-2xl text-white hover:bg-blue-500 transition-all"
-                >
-                  <ShoppingCart size={18} />
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full text-[10px] font-black flex items-center justify-center">
-                    {cartCount}
-                  </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {activeTab === 'shop' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: '8px 14px', width: 220 }}>
+                  <Search size={14} color={M3.textLow} />
+                  <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search products..." style={{ background: 'none', border: 'none', outline: 'none', color: M3.text, fontSize: 13, flex: 1, fontFamily: 'inherit' }} />
+                  {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: M3.textLow, display: 'flex' }}><X size={12} /></button>}
+                </div>
+                <button onClick={fetchProducts} style={{ width: 40, height: 40, borderRadius: 20, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.textMed }}>
+                  <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
                 </button>
-              )}
-            </div>
-          )}
-        </header>
-
-        {/* Alerts */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-900/20 border border-red-700 rounded-2xl flex items-center justify-between text-red-400 font-bold text-sm">
-            <div className="flex items-center gap-3"><AlertCircle size={18} />{error}</div>
-            <button onClick={() => setError(null)}><X size={16} /></button>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 p-4 bg-emerald-900/20 border border-emerald-700 rounded-2xl flex items-center justify-between text-emerald-400 font-bold text-sm">
-            <div className="flex items-center gap-3"><CheckCircle size={18} />{success}</div>
-            <button onClick={() => setSuccess(null)}><X size={16} /></button>
-          </div>
-        )}
-
-        {/* ── SHOP TAB ── */}
-        {activeTab === 'shop' && (
-          <div className="flex gap-8">
-            {/* Products Grid */}
-            <div className="flex-1">
-              {isLoading ? (
-                <div className="py-24 flex flex-col items-center gap-4">
-                  <Loader2 className="animate-spin text-blue-400" size={36} />
-                  <p className="text-sm font-mono uppercase tracking-widest text-slate-400">Loading marketplace...</p>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="py-24 text-center">
-                  <Store size={48} className="mx-auto text-slate-600 mb-4" />
-                  <p className="text-slate-500 font-mono uppercase text-sm tracking-widest">No products available</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {filteredProducts.map((p) => {
-                    const inCart = getCartQty(p.id);
-                    const outOfStock = p.quantity === 0;
-                    return (
-                      <div
-                        key={p.id}
-                        className={`bg-slate-800 rounded-[2rem] border overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-                          outOfStock ? 'border-slate-700 opacity-60' : 'border-slate-700 hover:border-blue-600/50'
-                        }`}
-                      >
-                        {/* Card Header */}
-                        <div className="p-6 border-b border-slate-700">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-900/30 border border-blue-800/40 flex items-center justify-center text-blue-400 font-black text-lg">
-                              {p.name?.[0]?.toUpperCase()}
-                            </div>
-                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-xl border ${getCategoryColor(p.category)}`}>
-                              {p.category}
-                            </span>
-                          </div>
-                          <h4 className="font-black text-slate-100 text-lg leading-tight">{p.name}</h4>
-                          {p.description && (
-                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.description}</p>
-                          )}
-                        </div>
-
-                        {/* Card Footer */}
-                        <div className="p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <p className="text-2xl font-black text-emerald-400">${Number(p.price).toFixed(2)}</p>
-                              <p className="text-[10px] text-slate-500 font-mono">
-                                {outOfStock ? 'Out of stock' : `${p.quantity} available`}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[10px] text-slate-500">by</p>
-                              <p className="text-xs font-bold text-emerald-400">{p.farmerUsername}</p>
-                            </div>
-                          </div>
-
-                          {/* Add to Cart Controls */}
-                          {outOfStock ? (
-                            <div className="w-full py-3 bg-slate-700 rounded-2xl text-center text-slate-500 font-bold text-sm">
-                              Out of Stock
-                            </div>
-                          ) : inCart === 0 ? (
-                            <button
-                              onClick={() => addToCart(p)}
-                              className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2"
-                            >
-                              <Plus size={16} /> Add to Cart
-                            </button>
-                          ) : (
-                            <div className="flex items-center justify-between bg-slate-700 rounded-2xl p-1">
-                              <button
-                                onClick={() => updateQty(p.id, -1)}
-                                className="w-10 h-10 rounded-xl bg-slate-600 hover:bg-red-600/40 text-slate-300 hover:text-red-400 flex items-center justify-center transition-all"
-                              >
-                                <Minus size={14} />
-                              </button>
-                              <span className="font-black text-slate-100">{inCart}</span>
-                              <button
-                                onClick={() => updateQty(p.id, 1)}
-                                disabled={inCart >= p.quantity}
-                                className="w-10 h-10 rounded-xl bg-slate-600 hover:bg-blue-600/40 text-slate-300 hover:text-blue-400 disabled:opacity-40 flex items-center justify-center transition-all"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Cart Panel */}
+              </>
+            )}
+            {activeTab === 'orders' && (
+              <button onClick={fetchMyOrders} style={{ width: 40, height: 40, borderRadius: 20, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.textMed }}>
+                <RefreshCw size={15} className={isOrdersLoading ? 'animate-spin' : ''} />
+              </button>
+            )}
+            {/* Cart badge */}
             {cart.length > 0 && (
-              <div className="w-80 shrink-0">
-                <div className="bg-slate-800 rounded-[2rem] border border-slate-700 overflow-hidden sticky top-8">
-                  <div className="p-6 border-b border-slate-700 flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-black text-lg">
-                      <ShoppingCart size={20} className="text-blue-400" />
-                      Cart
-                    </div>
-                    <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full font-mono border border-blue-500/20">
-                      {cartCount} item{cartCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-
-                  <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-                    {cart.map(i => (
-                      <div key={i.product.id} className="flex items-center gap-3 p-3 bg-slate-700/40 rounded-2xl border border-slate-700">
-                        <div className="w-9 h-9 rounded-xl bg-blue-900/30 border border-blue-800/40 flex items-center justify-center text-blue-400 font-black text-sm shrink-0">
-                          {i.product.name?.[0]?.toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm text-slate-100 truncate">{i.product.name}</p>
-                          <p className="text-[10px] text-slate-500">${Number(i.product.price).toFixed(2)} × {i.quantity}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button onClick={() => updateQty(i.product.id, -1)} className="w-7 h-7 rounded-lg bg-slate-600 hover:bg-slate-500 flex items-center justify-center transition-all">
-                            <Minus size={10} />
-                          </button>
-                          <span className="font-black text-xs w-5 text-center">{i.quantity}</span>
-                          <button onClick={() => updateQty(i.product.id, 1)} disabled={i.quantity >= i.product.quantity} className="w-7 h-7 rounded-lg bg-slate-600 hover:bg-slate-500 disabled:opacity-40 flex items-center justify-center transition-all">
-                            <Plus size={10} />
-                          </button>
-                          <button onClick={() => removeFromCart(i.product.id)} className="w-7 h-7 rounded-lg bg-red-900/30 hover:bg-red-600/40 text-red-400 flex items-center justify-center transition-all ml-1">
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-6 border-t border-slate-700">
-                    <div className="flex items-center justify-between mb-5">
-                      <span className="font-black text-slate-400 uppercase text-xs tracking-widest">Total</span>
-                      <span className="font-black text-2xl text-emerald-400">${cartTotal.toFixed(2)}</span>
-                    </div>
-                    <button
-                      onClick={handleCheckout}
-                      disabled={isCheckingOut}
-                      className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2"
-                    >
-                      {isCheckingOut ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
-                      {isCheckingOut ? 'Placing Order...' : 'Place Order'}
-                    </button>
-                    <button
-                      onClick={() => setCart([])}
-                      className="w-full mt-2 py-2.5 text-slate-500 hover:text-red-400 font-bold text-xs transition-all flex items-center justify-center gap-2"
-                    >
-                      <Trash2 size={12} /> Clear Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <button onClick={() => setActiveTab('shop')} style={{ position: 'relative', width: 40, height: 40, borderRadius: 20, background: M3.buyerCont, border: `1px solid ${M3.buyer}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.buyer }}>
+                <ShoppingCart size={16} />
+                <span style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, background: M3.error, borderRadius: '50%', fontSize: 9, fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${M3.bg}` }}>
+                  {cartCount}
+                </span>
+              </button>
             )}
           </div>
-        )}
+        </header>
 
-        {/* ── ORDERS TAB ── */}
-        {activeTab === 'orders' && (
-          <div className="bg-slate-800 rounded-[2.5rem] border border-slate-700 overflow-hidden">
-            <div className="p-8 border-b border-slate-700 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-900/40 text-blue-400 rounded-2xl">
-                  <ClipboardList size={22} />
-                </div>
-                <h3 className="font-black text-xl">Order History</h3>
-              </div>
-              <button onClick={fetchMyOrders} className="p-3 bg-slate-700 border border-slate-600 rounded-2xl text-slate-400 hover:text-blue-400 transition-all">
-                <RefreshCw size={16} className={isOrdersLoading ? 'animate-spin' : ''} />
-              </button>
+        <div style={{ padding: '32px' }}>
+
+          {/* Alerts */}
+          {error && (
+            <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 14, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={15} />{error}</div>
+              <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: M3.error }}><X size={15} /></button>
             </div>
+          )}
+          {success && (
+            <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 14, background: `${M3.greenCont}88`, border: `1px solid ${M3.green}44`, color: M3.green, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle size={15} />{success}</div>
+              <button onClick={() => setSuccess(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: M3.green }}><X size={15} /></button>
+            </div>
+          )}
 
-            {isOrdersLoading ? (
-              <div className="py-24 flex flex-col items-center gap-4">
-                <Loader2 className="animate-spin text-blue-400" size={36} />
-                <p className="text-sm font-mono uppercase tracking-widest text-slate-400">Loading orders...</p>
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="py-24 text-center">
-                <ClipboardList size={48} className="mx-auto text-slate-600 mb-4" />
-                <p className="text-slate-500 font-mono uppercase text-sm tracking-widest">No orders yet</p>
-                <button
-                  onClick={() => setActiveTab('shop')}
-                  className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold text-sm transition-all"
-                >
-                  Start Shopping
-                </button>
-              </div>
-            ) : (
-              <div className="p-6 space-y-4">
-                {orders.map((order) => (
-                  <div key={order.id} className="bg-slate-700/30 rounded-[1.5rem] border border-slate-700 overflow-hidden">
-                    <div className="px-6 py-4 flex items-center justify-between border-b border-slate-700">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-[10px] text-slate-500">ORDER #{order.id}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-mono text-[10px] text-slate-500">
-                          {order.orderedAt ? new Date(order.orderedAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                        </span>
-                        <span className="font-black text-emerald-400">${Number(order.totalPrice).toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      {order.items?.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between px-4 py-3 bg-slate-800/50 rounded-2xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-blue-900/30 border border-blue-800/40 flex items-center justify-center text-[10px] font-black text-blue-400">
-                              {item.productName?.[0]?.toUpperCase()}
+          {/* ── SHOP TAB ── */}
+          {activeTab === 'shop' && (
+            <div style={{ display: 'flex', gap: 24 }}>
+
+              {/* Products grid */}
+              <div style={{ flex: 1 }}>
+                {isLoading ? (
+                  <div style={{ padding: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                    <Loader2 size={28} color={M3.buyer} className="animate-spin" />
+                    <p style={{ fontSize: 12, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Loading marketplace...</p>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div style={{ padding: 64, textAlign: 'center' }}>
+                    <Store size={40} color={M3.textLow} style={{ margin: '0 auto 14px' }} />
+                    <p style={{ fontSize: 14, color: M3.textLow, fontWeight: 600 }}>{searchQuery ? `No products matching "${searchQuery}"` : 'No products available'}</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+                    {filteredProducts.map((p) => {
+                      const inCart    = getCartQty(p.id);
+                      const outOfStock = p.quantity === 0;
+                      return (
+                        <div key={p.id} style={{
+                          background: M3.surface,
+                          border: `1px solid ${inCart > 0 ? M3.buyer + '55' : M3.outline}`,
+                          borderRadius: 20, overflow: 'hidden',
+                          opacity: outOfStock ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                          boxShadow: inCart > 0 ? `0 0 0 1px ${M3.buyer}33` : 'none',
+                        }}>
+                          {/* Card top accent */}
+                          {inCart > 0 && <div style={{ height: 3, background: M3.buyer }} />}
+
+                          <div style={{ padding: '18px 18px 14px', borderBottom: `1px solid ${M3.outlineVar}` }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                              <div style={{ width: 42, height: 42, borderRadius: 13, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: M3.buyer }}>
+                                {p.name?.[0]?.toUpperCase()}
+                              </div>
+                              <CatChip category={p.category} />
                             </div>
-                            <div>
-                              <p className="font-bold text-sm text-slate-100">{item.productName}</p>
-                              <p className="text-[10px] text-slate-500">by {item.farmerUsername}</p>
-                            </div>
+                            <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>{p.name}</p>
+                            {p.description && <p style={{ fontSize: 12, color: M3.textLow, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.description}</p>}
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-sm text-emerald-400">${Number(item.priceAtPurchase).toFixed(2)}</p>
-                            <p className="text-[10px] text-slate-500">qty: {item.quantity}</p>
+
+                          <div style={{ padding: '14px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 }}>
+                              <div>
+                                <p style={{ fontSize: 22, fontWeight: 800, color: M3.green, letterSpacing: '-0.5px' }}>${Number(p.price).toFixed(2)}</p>
+                                <p style={{ fontSize: 11, color: outOfStock ? M3.error : M3.textLow, marginTop: 2, fontWeight: outOfStock ? 700 : 400 }}>
+                                  {outOfStock ? 'Out of stock' : `${p.quantity} available`}
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: 10, color: M3.textLow }}>by</p>
+                                <p style={{ fontSize: 12, fontWeight: 700, color: M3.buyer }}>{p.farmerUsername}</p>
+                              </div>
+                            </div>
+
+                            {outOfStock ? (
+                              <div style={{ padding: '10px', borderRadius: 12, background: M3.outlineVar, textAlign: 'center', fontSize: 12, color: M3.textLow, fontWeight: 600 }}>
+                                Out of Stock
+                              </div>
+                            ) : inCart === 0 ? (
+                              <button onClick={() => addToCart(p)} style={{
+                                width: '100%', padding: '11px', borderRadius: 12,
+                                background: M3.buyerCont, border: `1px solid ${M3.buyer}44`,
+                                color: M3.buyer, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                              }}>
+                                <Plus size={15} /> Add to Cart
+                              </button>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: M3.outlineVar, borderRadius: 12, padding: '4px', border: `1px solid ${M3.buyer}33` }}>
+                                <button onClick={() => updateQty(p.id, -1)} style={{ width: 36, height: 36, borderRadius: 9, background: M3.surfaceVar, border: 'none', color: M3.error, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, fontWeight: 700 }}>
+                                  <Minus size={14} />
+                                </button>
+                                <span style={{ fontSize: 15, fontWeight: 800, color: M3.buyer }}>{inCart}</span>
+                                <button onClick={() => updateQty(p.id, 1)} disabled={inCart >= p.quantity} style={{ width: 36, height: 36, borderRadius: 9, background: M3.buyerCont, border: 'none', color: M3.buyer, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: inCart >= p.quantity ? 0.4 : 1 }}>
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Cart panel */}
+              {cart.length > 0 && (
+                <div style={{ width: 300, flexShrink: 0 }}>
+                  <div style={{ background: M3.surface, border: `1px solid ${M3.buyer}44`, borderRadius: 20, overflow: 'hidden', position: 'sticky', top: 88 }}>
+                    {/* Cart header */}
+                    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${M3.buyer}08` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <ShoppingCart size={16} color={M3.buyer} />
+                        <p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Your Cart</p>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${M3.buyer}18`, color: M3.buyer, border: `1px solid ${M3.buyer}33` }}>
+                        {cartCount} item{cartCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {/* Cart items */}
+                    <div style={{ padding: '12px', maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {cart.map(i => (
+                        <div key={i.product.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: M3.outlineVar, borderRadius: 14, border: `1px solid ${M3.outline}` }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: M3.buyer }}>
+                            {i.product.name?.[0]?.toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: M3.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.product.name}</p>
+                            <p style={{ fontSize: 10, color: M3.textLow }}>${Number(i.product.price).toFixed(2)} × {i.quantity}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                            <button onClick={() => updateQty(i.product.id, -1)} style={{ width: 24, height: 24, borderRadius: 7, background: M3.surfaceVar, border: 'none', color: M3.textMed, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Minus size={10} /></button>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: M3.text, width: 16, textAlign: 'center' }}>{i.quantity}</span>
+                            <button onClick={() => updateQty(i.product.id, 1)} disabled={i.quantity >= i.product.quantity} style={{ width: 24, height: 24, borderRadius: 7, background: M3.buyerCont, border: 'none', color: M3.buyer, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: i.quantity >= i.product.quantity ? 0.4 : 1 }}><Plus size={10} /></button>
+                            <button onClick={() => removeFromCart(i.product.id)} style={{ width: 24, height: 24, borderRadius: 7, background: `${M3.errorCont}55`, border: 'none', color: M3.error, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}><Trash2 size={10} /></button>
                           </div>
                         </div>
                       ))}
                     </div>
+
+                    {/* Cart footer */}
+                    <div style={{ padding: '16px 20px', borderTop: `1px solid ${M3.outlineVar}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: M3.green, letterSpacing: '-0.5px' }}>${cartTotal.toFixed(2)}</span>
+                      </div>
+                      <button onClick={handleCheckout} disabled={isCheckingOut} style={{ width: '100%', padding: '13px', borderRadius: 14, background: isCheckingOut ? M3.outlineVar : M3.buyerCont, border: `1px solid ${M3.buyer}44`, color: M3.buyer, fontSize: 14, fontWeight: 700, cursor: isCheckingOut ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        {isCheckingOut ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
+                        {isCheckingOut ? 'Placing Order...' : 'Place Order'}
+                      </button>
+                      <button onClick={() => setCart([])} style={{ width: '100%', marginTop: 8, padding: '9px', borderRadius: 12, background: 'none', border: 'none', color: M3.textLow, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <Trash2 size={12} /> Clear Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── ORDERS TAB ── */}
+          {activeTab === 'orders' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Order stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                {[
+                  { label: 'Orders Placed',  value: orders.length,               sub: 'Total orders',           accent: M3.buyer,   icon: ClipboardList },
+                  { label: 'Total Spent',    value: `$${totalSpent.toFixed(2)}`, sub: 'Across all orders',      accent: M3.green,   icon: TrendingUp },
+                  { label: 'Items Bought',   value: orders.reduce((s, o) => s + (o.items?.length || 0), 0), sub: 'Unique products', accent: M3.primary, icon: Package },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: '20px 22px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: s.accent, borderRadius: '20px 20px 0 0' }} />
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${s.accent}22`, border: `1px solid ${s.accent}44`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <s.icon size={18} color={s.accent} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#163420', border: '1px solid #1a4a2a', padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: M3.green }}>
+                        <ArrowUpRight size={10} />Active
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 28, fontWeight: 800, color: M3.text, lineHeight: 1, letterSpacing: '-0.5px' }}>{s.value}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: M3.textMed, marginTop: 5 }}>{s.label}</p>
+                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{s.sub}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Orders list */}
+              <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
+                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 11, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ClipboardList size={15} color={M3.buyer} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Order History</p>
+                      <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>{orders.length} orders placed</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setActiveTab('shop')} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 20, background: M3.buyerCont, border: `1px solid ${M3.buyer}44`, color: M3.buyer, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    <Store size={13} /> Shop More
+                  </button>
+                </div>
+
+                {isOrdersLoading ? (
+                  <div style={{ padding: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                    <Loader2 size={28} color={M3.buyer} className="animate-spin" />
+                    <p style={{ fontSize: 12, color: M3.textLow }}>Loading orders...</p>
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div style={{ padding: 64, textAlign: 'center' }}>
+                    <ClipboardList size={40} color={M3.textLow} style={{ margin: '0 auto 14px' }} />
+                    <p style={{ fontSize: 14, color: M3.textLow, fontWeight: 600 }}>No orders yet</p>
+                    <button onClick={() => setActiveTab('shop')} style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 20px', borderRadius: 20, background: M3.buyerCont, border: `1px solid ${M3.buyer}44`, color: M3.buyer, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      <Store size={14} /> Start Shopping
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[...orders].reverse().map((order) => (
+                      <div key={order.id} style={{ borderRadius: 16, border: `1px solid ${M3.outline}`, overflow: 'hidden', background: M3.surfaceVar }}>
+                        {/* Order header */}
+                        <div style={{ padding: '13px 18px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: M3.outlineVar }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, fontFamily: 'monospace' }}>ORDER #{order.id}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${M3.green}18`, color: M3.green, border: `1px solid ${M3.green}33` }}>Completed</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <span style={{ fontSize: 11, color: M3.textLow }}>
+                              {order.orderedAt ? new Date(order.orderedAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                            </span>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: M3.green }}>${Number(order.totalPrice).toFixed(2)}</span>
+                          </div>
+                        </div>
+                        {/* Order items */}
+                        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {order.items?.map((item, i) => (
+                            <div key={item.id ?? i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: M3.surface, borderRadius: 12, border: `1px solid ${M3.outlineVar}` }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 10, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: M3.buyer, flexShrink: 0 }}>
+                                  {item.productName?.[0]?.toUpperCase()}
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{item.productName}</p>
+                                  <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>by {item.farmerUsername}</p>
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: 13, fontWeight: 800, color: M3.green }}>${Number(item.priceAtPurchase).toFixed(2)}</p>
+                                <p style={{ fontSize: 10, color: M3.textLow, marginTop: 2 }}>qty: {item.quantity}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── ANALYTICS TAB ── */}
+          {activeTab === 'analytics' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Stat cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                {[
+                  { label: 'Total Spent',       value: `$${totalSpent.toFixed(2)}`,    sub: 'Across all orders',           accent: M3.buyer,    icon: TrendingUp },
+                  { label: 'Orders Placed',     value: orders.length,                   sub: 'Total purchases made',        accent: M3.green,    icon: ClipboardList },
+                  { label: 'Unique Products',   value: Object.keys(productMap).length,  sub: 'Different items purchased',   accent: M3.primary,  icon: Package },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: '20px 22px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: s.accent, borderRadius: '20px 20px 0 0' }} />
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: `${s.accent}22`, border: `1px solid ${s.accent}44`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <s.icon size={18} color={s.accent} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#163420', border: '1px solid #1a4a2a', padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, color: M3.green }}>
+                        <ArrowUpRight size={10} />Active
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 28, fontWeight: 800, color: M3.text, lineHeight: 1, letterSpacing: '-0.5px' }}>{s.value}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: M3.textMed, marginTop: 5 }}>{s.label}</p>
+                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{s.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Row 2 — Most purchased + Category spend donut */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+
+                {/* Most purchased products */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Most Purchased Products</p>
+                  <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Units bought per product</p>
+                  {topProducts.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: M3.textLow, padding: 40, fontSize: 13 }}>No orders yet</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={topProducts} barSize={32}>
+                        <XAxis dataKey="name" tick={{ fill: M3.textLow, fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: M3.textLow, fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ fill: `${M3.buyer}10` }} />
+                        <Bar dataKey="units" name="Units" fill={M3.buyer} radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                {/* Spending by category donut */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Spending by Category</p>
+                  <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Total amount spent per category</p>
+                  {categorySpendData.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: M3.textLow, padding: 40, fontSize: 13 }}>No orders yet</p>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                      <ResponsiveContainer width={180} height={180}>
+                        <PieChart>
+                          <Pie data={categorySpendData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="amount">
+                            {categorySpendData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} stroke="none" />)}
+                          </Pie>
+                          <Tooltip content={<ChartTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {categorySpendData.map((d, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: 3, background: DONUT_COLORS[i % DONUT_COLORS.length], flexShrink: 0 }} />
+                            <div>
+                              <p style={{ fontSize: 12, fontWeight: 700, color: M3.text }}>${d.amount}</p>
+                              <p style={{ fontSize: 11, color: M3.textLow }}>{d.name}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 3 — Shopping Insights */}
+              {(() => {
+                const favFarmerMap = allItems.reduce((acc, i) => {
+                  acc[i.farmerUsername] = (acc[i.farmerUsername] || 0) + (i.quantity || 0);
+                  return acc;
+                }, {});
+                const favFarmer = Object.entries(favFarmerMap).sort((a, b) => b[1] - a[1])[0];
+
+                const mostExpensive = allItems.reduce((max, i) =>
+                  (i.priceAtPurchase || 0) > (max?.priceAtPurchase || 0) ? i : max, null);
+
+                const totalItems = allItems.reduce((s, i) => s + (i.quantity || 0), 0);
+
+                const avgOrderValue = orders.length > 0
+                  ? (totalSpent / orders.length).toFixed(2)
+                  : '0.00';
+
+                const mostBought = topProducts[0];
+
+                const insights = [
+                  {
+                    label: 'Favourite Farmer',
+                    value: favFarmer ? favFarmer[0] : '—',
+                    sub: favFarmer ? `${favFarmer[1]} units bought from them` : 'No orders yet',
+                    color: M3.buyer,
+                    icon: '🌾',
+                  },
+                  {
+                    label: 'Most Bought Product',
+                    value: mostBought ? mostBought.name : '—',
+                    sub: mostBought ? `${mostBought.units} units total` : 'No purchases yet',
+                    color: M3.green,
+                    icon: '🛒',
+                  },
+                  {
+                    label: 'Most Expensive Purchase',
+                    value: mostExpensive ? `$${Number(mostExpensive.priceAtPurchase).toFixed(2)}` : '—',
+                    sub: mostExpensive ? mostExpensive.productName : 'No purchases yet',
+                    color: M3.yellow,
+                    icon: '💰',
+                  },
+                  {
+                    label: 'Total Items Bought',
+                    value: totalItems,
+                    sub: `Across ${orders.length} orders`,
+                    color: M3.primary,
+                    icon: '📦',
+                  },
+                  {
+                    label: 'Avg Order Value',
+                    value: `$${avgOrderValue}`,
+                    sub: 'Per order average',
+                    color: M3.tertiary || '#e6b9d8',
+                    icon: '📊',
+                  },
+                  {
+                    label: 'Farmers Supported',
+                    value: Object.keys(favFarmerMap).length,
+                    sub: 'Unique farmers ordered from',
+                    color: M3.green,
+                    icon: '🤝',
+                  },
+                ];
+
+                return (
+                  <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
+                    <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                        ✨
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: M3.text }}>Shopping Insights</p>
+                        <p style={{ fontSize: 12, color: M3.textLow, marginTop: 1 }}>Your personal buying habits</p>
+                      </div>
+                    </div>
+                    <div style={{ padding: 20, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                      {insights.map((ins, i) => (
+                        <div key={i} style={{
+                          padding: '16px 18px', borderRadius: 16,
+                          background: M3.surfaceVar, border: `1px solid ${M3.outline}`,
+                          transition: 'border-color 0.15s',
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = ins.color + '55'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = M3.outline}
+                        >
+                          <div style={{ fontSize: 22, marginBottom: 10 }}>{ins.icon}</div>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{ins.label}</p>
+                          <p style={{ fontSize: 17, fontWeight: 800, color: ins.color, letterSpacing: '-0.3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ins.value}</p>
+                          <p style={{ fontSize: 11, color: M3.textLow, marginTop: 4, lineHeight: 1.4 }}>{ins.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ── SETTINGS TAB ── */}
+          {activeTab === 'settings' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start', maxWidth: 900 }}>
+
+              {/* LEFT — Profile + Password */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Profile card */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
+                  <div style={{ height: 80, background: `linear-gradient(135deg, ${M3.buyerCont}cc, #0369a188, #082f49)`, borderBottom: `1px solid ${M3.outline}` }} />
+                  <div style={{ padding: '0 24px 24px' }}>
+                    <div style={{ width: 72, height: 72, borderRadius: 20, background: `linear-gradient(135deg, ${M3.buyerCont}, #0369a1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 900, color: M3.buyer, border: `3px solid ${M3.surface}`, marginTop: -36, marginBottom: 12, boxShadow: `0 4px 20px ${M3.buyerCont}99` }}>
+                      {user?.username?.substring(0, 2).toUpperCase() || 'BU'}
+                    </div>
+                    <p style={{ fontSize: 18, fontWeight: 800, color: M3.text }}>{user?.username || 'Buyer'}</p>
+                    <p style={{ fontSize: 12, color: M3.textLow, marginTop: 3 }}>{user?.username}@directroot.com</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: M3.buyerCont, color: M3.buyer, border: `1px solid ${M3.buyer}44` }}>BUYER</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 6, height: 6, background: M3.green, borderRadius: '50%', boxShadow: `0 0 6px ${M3.green}` }} />
+                        <span style={{ fontSize: 11, color: M3.green, fontWeight: 600 }}>Active</span>
+                      </div>
+                    </div>
+                    {/* Stats grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, marginTop: 18, background: M3.outline, borderRadius: 14, overflow: 'hidden' }}>
+                      {[
+                        { label: 'Orders',   value: orders.length },
+                        { label: 'Spent',    value: `$${totalSpent.toFixed(0)}` },
+                        { label: 'Products', value: Object.keys(productMap).length },
+                      ].map((s, i) => (
+                        <div key={i} style={{ background: M3.surfaceVar, padding: '12px 0', textAlign: 'center' }}>
+                          <p style={{ fontSize: 17, fontWeight: 800, color: M3.buyer }}>{s.value}</p>
+                          <p style={{ fontSize: 10, color: M3.textLow, marginTop: 2 }}>{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Change password */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
+                  <div style={{ padding: '18px 22px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 11, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Lock size={15} color={M3.buyer} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>Change Password</p>
+                      <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Update your account password</p>
+                    </div>
+                  </div>
+                  <div style={{ padding: 22 }}>
+                    {pwError && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 12, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><AlertTriangle size={13} />{pwError}</div>}
+                    {pwSuccess && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 12, background: `${M3.greenCont}88`, border: `1px solid ${M3.green}44`, color: M3.green, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><CheckCircle size={13} />{pwSuccess}</div>}
+                    <BuyerPwInput label="Current Password" placeholder="Enter current password" value={pwForm.current} onChange={v => setPwForm(f => ({ ...f, current: v }))} show={showPw.current} onToggleShow={() => setShowPw(s => ({ ...s, current: !s.current }))} />
+                    <BuyerPwInput label="New Password" placeholder="Min. 6 characters" value={pwForm.newPw} onChange={v => setPwForm(f => ({ ...f, newPw: v }))} show={showPw.newPw} onToggleShow={() => setShowPw(s => ({ ...s, newPw: !s.newPw }))} />
+                    <BuyerPwInput label="Confirm New Password" placeholder="Re-enter new password" value={pwForm.confirm} onChange={v => setPwForm(f => ({ ...f, confirm: v }))} show={showPw.confirm} onToggleShow={() => setShowPw(s => ({ ...s, confirm: !s.confirm }))} />
+                    <button onClick={handleChangePassword} disabled={isPwLoading} style={{ width: '100%', padding: '12px', borderRadius: 14, background: isPwLoading ? M3.outlineVar : M3.buyerCont, border: `1px solid ${M3.buyer}44`, color: M3.buyer, fontSize: 13, fontWeight: 700, cursor: isPwLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      {isPwLoading ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />}
+                      {isPwLoading ? 'Updating...' : 'Update Password'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT — Account info + Danger zone */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Account info */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 22 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: M3.text, marginBottom: 16 }}>Account Information</p>
+                  {[
+                    { label: 'Username',       value: user?.username || '—' },
+                    { label: 'Role',           value: 'Buyer' },
+                    { label: 'Orders Placed',  value: orders.length },
+                    { label: 'Total Spent',    value: `$${totalSpent.toFixed(2)}` },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0', borderBottom: i < 4 ? `1px solid ${M3.outlineVar}` : 'none' }}>
+                      <span style={{ fontSize: 12, color: M3.textLow }}>{row.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Danger zone */}
+                <div style={{ background: M3.surface, border: `1px solid ${M3.error}55`, borderRadius: 24, overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 22px', borderBottom: `1px solid ${M3.error}22`, background: `linear-gradient(135deg, ${M3.errorCont}44, ${M3.errorCont}11)`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: `${M3.error}18`, border: `1px solid ${M3.error}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <AlertTriangle size={14} color={M3.error} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: M3.error }}>Danger Zone</p>
+                      <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Irreversible actions</p>
+                    </div>
+                  </div>
+                  <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                    {/* Sign out */}
+                    <div style={{ borderRadius: 14, border: `1px solid ${M3.outline}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '13px 16px', background: M3.outlineVar }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: M3.text }}>Sign Out</p>
+                        <p style={{ fontSize: 11, color: M3.textLow, marginTop: 3 }}>End your current session.</p>
+                      </div>
+                      <div style={{ padding: '10px 16px', borderTop: `1px solid ${M3.outline}`, display: 'flex', justifyContent: 'flex-end' }}>
+                        <button onClick={onLogout} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: `1px solid ${M3.outline}`, background: M3.outlineVar, color: M3.textMed, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          <LogOut size={12} /> Sign Out
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Delete account */}
+                    <div style={{ borderRadius: 14, border: `1px solid ${M3.error}44`, overflow: 'hidden' }}>
+                      <div style={{ padding: '13px 16px', background: `${M3.errorCont}22` }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: M3.error }}>Delete My Account</p>
+                        <p style={{ fontSize: 11, color: M3.textLow, marginTop: 3, lineHeight: 1.5 }}>
+                          Permanently delete your account <strong style={{ color: M3.textMed }}>({user?.username})</strong>. Your order history will be preserved.
+                        </p>
+                      </div>
+                      <div style={{ padding: '10px 16px', borderTop: `1px solid ${M3.error}22`, display: 'flex', justifyContent: 'flex-end' }}>
+                        <button onClick={handleDeleteAccount} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: `1px solid ${M3.error}55`, background: `${M3.errorCont}66`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          <AlertTriangle size={12} /> Delete My Account
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
       </main>
     </div>
   );
-};
+}
 
-export default BuyerDashboard;
