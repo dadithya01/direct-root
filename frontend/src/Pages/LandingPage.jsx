@@ -4,6 +4,7 @@ import {
   ArrowRight, CheckCircle, Zap, Package,
   Star, BarChart3, User as UserIcon,
 } from 'lucide-react';
+import {  GuidedTour } from './Guid&Chatbox';
 
 const M3 = {
   bg:          '#0f1117',
@@ -198,7 +199,7 @@ export default function LandingPage({ onGetStarted }) {
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '100px 40px 80px', textAlign: 'center', overflow: 'hidden' }}>
+      <section id="tour-hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '100px 40px 80px', textAlign: 'center', overflow: 'hidden' }}>
 
         {/* Gradient mesh background */}
         <div style={{
@@ -291,7 +292,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ── STATS ── */}
-      <section id="stats" style={{ padding: '80px 40px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
+      <section id="tour-stats" style={{ padding: '80px 40px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}><span id="stats" style={{position:'absolute',top:-64}} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(74,79,168,0.08) 0%, transparent 70%)', zIndex: 0 }} />
         <div ref={statsRef} style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, position: 'relative', zIndex: 1 }}>
           {stats.map((s, i) => (
@@ -311,7 +312,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ padding: '100px 40px', position: 'relative', overflow: 'hidden' }}>
+      <section id="tour-features" style={{ padding: '100px 40px', position: 'relative', overflow: 'hidden' }}><span id="features" style={{position:'absolute',top:-64}} />
         {/* Background mesh */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: `radial-gradient(ellipse 50% 60% at 0% 50%, rgba(52,211,153,0.07) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 100% 50%, rgba(74,79,168,0.07) 0%, transparent 60%)` }} />
 
@@ -400,7 +401,7 @@ export default function LandingPage({ onGetStarted }) {
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${s.color}66, transparent)`, borderRadius: '24px 24px 0 0' }} />
                   <div style={{ position: 'absolute', top: -50, left: '50%', transform: 'translateX(-50%)', width: 100, height: 100, borderRadius: '50%', background: `${s.color}08`, filter: 'blur(20px)', pointerEvents: 'none' }} />
 
-                  <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', padding: '4px 14px', borderRadius: 20, background: 'rgba(15,17,23,0.9)', backdropFilter: 'blur(10px)', border: `1px solid ${s.color}55`, fontSize: 11, fontWeight: 800, color: s.color, letterSpacing: '0.08em', zIndex: 2 }}>
+                  <div style={{ position: 'absolute', top: -14,marginTop: 24, left: '50%', transform: 'translateX(-50%)', padding: '4px 14px', borderRadius: 20, background: 'rgba(15,17,23,0.9)', backdropFilter: 'blur(10px)', border: `1px solid ${s.color}55`, fontSize: 11, fontWeight: 800, color: s.color, letterSpacing: '0.08em', zIndex: 2 }}>
                     STEP {s.step}
                   </div>
                   <div style={{ position: 'relative', zIndex: 1 }}>
@@ -416,7 +417,7 @@ export default function LandingPage({ onGetStarted }) {
           </div>
 
           <Reveal delay={300}>
-            <div style={{ marginTop: 64, textAlign: 'center' }}>
+            <div id="tour-cta" style={{ marginTop: 64, textAlign: 'center' }}>
               <button onClick={onGetStarted} style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '18px 44px', borderRadius: 20, background: `linear-gradient(135deg,${M3.primaryCont},#6366f1)`, border: `1px solid ${M3.primary}44`, color: M3.primary, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 30px rgba(74,79,168,0.5)`, transition: 'all 0.3s' }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 40px rgba(74,79,168,0.7)`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 30px rgba(74,79,168,0.5)`; }}
@@ -466,6 +467,11 @@ export default function LandingPage({ onGetStarted }) {
           <p style={{ fontSize: 12, color: M3.textLow }}>Built with ❤️ for local farmers</p>
         </div>
       </footer>
+
+      {/* ── Chatbot + Guided Tour ── */}
+      {/* <ChatBot /> */}
+      <GuidedTour onGetStarted={onGetStarted} />
+
     </div>
   );
 }
