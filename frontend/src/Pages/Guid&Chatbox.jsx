@@ -20,9 +20,7 @@ const M3 = {
 };
 
 // ── Paste your Groq key here (get free key at console.groq.com) ──
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_KEY;
-const GROQ_URL     = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+const BACKEND_URL = 'http://localhost:8080/api/chat';
 const SYSTEM_PROMPT = `You are a helpful assistant for DirectRoot — a Sri Lankan farm-to-buyer marketplace.
 Only answer questions related to DirectRoot. Keep answers short, friendly, and clear (2-4 sentences max).
 Use occasional emojis. Wrap important words in **double asterisks** for bold.
@@ -38,33 +36,31 @@ About DirectRoot:
 - Passwords changed in Settings → Change Password. Accounts deleted in Settings → Danger Zone.
 - Farmers must remove all listings before deleting their account.`;
 
-async function groqReply(userMessage) {
-  const res = await fetch(GROQ_URL, {
+async function chatWithBackend(userMessage) {
+  const res = await fetch(BACKEND_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user',   content: userMessage },
+        { role: 'user',   content: userMessage }
       ],
       max_tokens: 200,
-      temperature: 0.7,
-    }),
+      temperature: 0.7
+    })
   });
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
-    console.error('Groq error:', res.status, errBody);
-    throw new Error(`Groq ${res.status}: ${errBody?.error?.message || 'Unknown error'}`);
+    console.error('Backend chat error:', res.status, errBody);
+    throw new Error(`Backend ${res.status}: ${errBody?.error || 'Unknown error'}`);
   }
 
   const data = await res.json();
+  // response structure is exactly like Groq, returned by your backend
   const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Empty Groq response');
+  if (!text) throw new Error('Empty backend response');
   return text;
 }
 
@@ -151,9 +147,6 @@ export function ChatBot() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  // ── Key fix: check if key starts with gsk_ ──
-  const usingAI = GROQ_API_KEY && GROQ_API_KEY.startsWith('gsk_');
-
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
     if (!msg || typing) return;
@@ -163,18 +156,18 @@ export function ChatBot() {
 
     let reply = null;
 
-    if (usingAI) {
-      try {
-        reply = await groqReply(msg);
-      } catch (err) {
-        console.warn('Groq failed, using local FAQ fallback:', err.message);
-      }
+    if (true) { // always call backend securely
+    try {
+      reply = await chatWithBackend(msg);
+    } catch (err) {
+      console.warn('Backend failed, using local FAQ fallback:', err.message);
     }
+  }
 
-    if (!reply) {
-      await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
-      reply = getSmartResponse(msg);
-    }
+  if (!reply) {
+    await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
+    reply = getSmartResponse(msg);
+  }
 
     setMessages(m => [...m, { from: 'bot', text: reply }]);
     setTyping(false);
@@ -228,7 +221,7 @@ export function ChatBot() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: M3.green, boxShadow: `0 0 6px ${M3.green}` }} />
               <span style={{ fontSize: 11, color: M3.green, fontWeight: 600 }}>
-                {usingAI ? 'AI' : 'Smart FAQ'}
+                Assistant
               </span>
             </div>
           </div>
