@@ -19,7 +19,6 @@ const M3 = {
   yellow:      '#f5c518',
 };
 
-// ── Paste your Groq key here (get free key at console.groq.com) ──
 const BACKEND_URL = 'http://localhost:8080/api/chat';
 const SYSTEM_PROMPT = `You are a helpful assistant for DirectRoot — a Sri Lankan farm-to-buyer marketplace.
 Only answer questions related to DirectRoot. Keep answers short, friendly, and clear (2-4 sentences max).
@@ -58,13 +57,11 @@ async function chatWithBackend(userMessage) {
   }
 
   const data = await res.json();
-  // response structure is exactly like Groq, returned by your backend
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Empty backend response');
   return text;
 }
 
-// ── Local TF-IDF fallback ──
 const FAQ = [
   { question: 'How do I register or create an account?', keywords: ['register', 'sign up', 'signup', 'create account', 'join', 'how to start', 'new account', 'begin', 'getting started'], answer: "To register, click the **Sign In** button in the top right → then click **Sign up**. Choose your role — Farmer, Buyer, or Admin — enter your username and password, and you're in! It's completely free. 🌱" },
   { question: 'How do I list or sell products as a farmer?', keywords: ['farmer', 'sell', 'list', 'listing', 'post product', 'add product', 'create listing', 'new product', 'upload product'], answer: "As a Farmer, go to **Post New Item** after signing in. Fill in the product name, category, price, and quantity. Your listing appears in the marketplace instantly for buyers to purchase. 🌾" },
@@ -125,7 +122,6 @@ function BoldText({ text }) {
   );
 }
 
-// ── CHATBOT ──
 export function ChatBot() {
   const [open, setOpen]         = useState(false);
   const [messages, setMessages] = useState([
@@ -156,7 +152,7 @@ export function ChatBot() {
 
     let reply = null;
 
-    if (true) { // always call backend securely
+    if (true) {
     try {
       reply = await chatWithBackend(msg);
     } catch (err) {
@@ -175,7 +171,6 @@ export function ChatBot() {
 
   return (
     <>
-      {/* Floating pill button */}
       <button onClick={() => { setOpen(o => !o); setUnread(0); }} style={{
         position: 'fixed', bottom: 28, right: 28, zIndex: 1000,
         height: 48, padding: '0 20px', borderRadius: 999,
@@ -201,7 +196,6 @@ export function ChatBot() {
         )}
       </button>
 
-      {/* Chat panel */}
       <div style={{
         position: 'fixed', bottom: 88, right: 28, zIndex: 999,
         width: 340, height: open ? 500 : 0, overflow: 'hidden',
@@ -211,7 +205,6 @@ export function ChatBot() {
         transition: 'height 0.35s cubic-bezier(0.4,0,0.2,1)',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12, background: `linear-gradient(135deg,rgba(74,79,168,0.3),transparent)`, flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, borderRadius: 12, background: `linear-gradient(135deg,${M3.primaryCont},#6366f1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 16px ${M3.primary}44` }}>
             <Sprout size={18} color={M3.primary} />
@@ -227,7 +220,6 @@ export function ChatBot() {
           </div>
         </div>
 
-        {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {messages.map((m, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: m.from === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -267,7 +259,6 @@ export function ChatBot() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div style={{ padding: '12px 14px', borderTop: `1px solid ${M3.outlineVar}`, display: 'flex', gap: 8, flexShrink: 0 }}>
           <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !typing && sendMessage()}
@@ -297,9 +288,6 @@ export function ChatBot() {
   );
 }
 
-// ══════════════════════════════════════════════
-// ── GUIDED TOUR ──
-// ══════════════════════════════════════════════
 const TOUR_STEPS = [
   { target: null,            title: '👋 Welcome to DirectRoot!',  desc: "Sri Lanka's first direct farm-to-buyer marketplace. Let us show you around in 5 quick steps.", position: 'center' },
   { target: 'tour-hero',    title: '🌱 Fresh from the farm',      desc: 'DirectRoot connects local farmers directly with buyers — no middlemen, fair prices, fresher produce.', position: 'bottom' },
@@ -315,7 +303,7 @@ export function GuidedTour({ onGetStarted }) {
 
   useEffect(() => {
     const seen = localStorage.getItem('dr_tour_seen');
-    if (seen) return;
+    if (seen) return;  
     const t = setTimeout(() => setVisible(true), 1000);
     return () => clearTimeout(t);
   }, []);

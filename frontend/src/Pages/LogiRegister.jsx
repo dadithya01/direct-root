@@ -44,8 +44,6 @@ const AuthInput = ({ icon: Icon, label, name, type = 'text', placeholder, value,
   </div>
 );
 
-// ── onSuccess is called with user object when login/register succeeds ──
-// ── App.jsx handles routing after that ──
 export default function LoginRegister({ onSuccess }) {
   const [view, setView]               = useState('login');
   const [role, setRole]               = useState('FARMER');
@@ -71,7 +69,6 @@ export default function LoginRegister({ onSuccess }) {
       });
       const result = await res.json();
       if (res.ok) {
-        // Hand user back to App.jsx — no routing here
         onSuccess({ username: formData.username, role: result.data?.role || role, token: result.data?.token });
       } else {
         setError(result.message || 'Authentication failed.');
@@ -85,7 +82,6 @@ export default function LoginRegister({ onSuccess }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans','Roboto',system-ui,sans-serif", color: M3.text }}>
 
-      {/* Left decorative panel */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', background: M3.surface, borderRight: `1px solid ${M3.outline}`, padding: 60 }}>
         <div style={{ position: 'absolute', top: -100, right: -100, width: 400, height: 400, borderRadius: '50%', background: `${M3.primaryCont}22`, filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: -80, left: -80, width: 300, height: 300, borderRadius: '50%', background: `#34d39911`, filter: 'blur(60px)' }} />
@@ -120,7 +116,6 @@ export default function LoginRegister({ onSuccess }) {
         </div>
       </div>
 
-      {/* Right form panel */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 32 }}>

@@ -18,7 +18,6 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    // BUYER — place a new order
     @PostMapping
     public ResponseEntity<APIResponse> placeOrder(
             @RequestBody OrderDTO dto,
@@ -35,7 +34,6 @@ public class OrderController {
         );
     }
 
-    // BUYER — view their own order history
     @GetMapping("/my")
     public ResponseEntity<APIResponse> getMyOrders(Authentication auth) {
         List<OrderDTO> orders = orderService.getMyOrders(auth.getName());

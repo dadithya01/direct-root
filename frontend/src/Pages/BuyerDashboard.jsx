@@ -29,7 +29,6 @@ const M3 = {
   text:        '#f0f0ff',
   textMed:     '#c4c4e0',
   textLow:     '#8e8eaa',
-  // Buyer accent — sky blue
   buyer:       '#7dd3fc',
   buyerCont:   '#0c4a6e',
   buyerDark:   '#082f49',
@@ -61,7 +60,6 @@ const CatChip = ({ category }) => {
   );
 };
 
-// ── Outside component to prevent focus loss ──
 const BuyerPwInput = ({ label, placeholder, value, onChange, show, onToggleShow }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</label>
@@ -98,7 +96,6 @@ export default function BuyerDashboard({ user, onLogout }) {
   const [success, setSuccess]           = useState(null);
   const [searchQuery, setSearchQuery]   = useState('');
 
-  // Settings state
   const [pwForm, setPwForm]             = useState({ current: '', newPw: '', confirm: '' });
   const [showPw, setShowPw]             = useState({ current: false, newPw: false, confirm: false });
   const [pwError, setPwError]           = useState(null);
@@ -221,10 +218,8 @@ export default function BuyerDashboard({ user, onLogout }) {
 
   const totalSpent = orders.reduce((s, o) => s + (o.totalPrice || 0), 0);
 
-  // ── Analytics data ──
   const allItems = orders.flatMap(o => o.items || []);
 
-  // Most purchased products
   const productMap = allItems.reduce((acc, i) => {
     acc[i.productName] = (acc[i.productName] || 0) + (i.quantity || 0);
     return acc;
@@ -234,7 +229,6 @@ export default function BuyerDashboard({ user, onLogout }) {
     .sort((a, b) => b.units - a.units)
     .slice(0, 6);
 
-  // Spending by category — map through products to get categories
   const catSpendMap = allItems.reduce((acc, item) => {
     const product = products.find(p => p.name === item.productName);
     const cat = product?.category || 'Other';
@@ -271,9 +265,7 @@ export default function BuyerDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans', 'Roboto', system-ui, sans-serif", color: M3.text }}>
 
-      {/* ── Sidebar ── */}
       <aside style={{ width: 256, background: M3.surface, borderRight: `1px solid ${M3.outline}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 20 }}>
-        {/* Logo */}
         <div style={{ padding: '28px 20px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${M3.buyerCont}, #0369a1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 1px ${M3.buyer}44, 0 4px 12px #0369a144` }}>
@@ -286,7 +278,6 @@ export default function BuyerDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Nav */}
         <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 8px', marginBottom: 6 }}>Menu</p>
           {nav.map(({ tab, icon: Icon, label }) => {
@@ -310,7 +301,6 @@ export default function BuyerDashboard({ user, onLogout }) {
             );
           })}
 
-          {/* Quick stats */}
           <div style={{ marginTop: 12, padding: 16, borderRadius: 16, background: M3.outlineVar, border: `1px solid ${M3.outline}` }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>My Stats</p>
             {[
@@ -325,7 +315,6 @@ export default function BuyerDashboard({ user, onLogout }) {
             ))}
           </div>
 
-          {/* Cart mini panel */}
           {cart.length > 0 && (
             <div style={{ marginTop: 12, borderRadius: 16, background: `${M3.buyer}10`, border: `1px solid ${M3.buyer}33`, overflow: 'hidden' }}>
               <div style={{ padding: '12px 16px', borderBottom: `1px solid ${M3.buyer}22`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -352,7 +341,6 @@ export default function BuyerDashboard({ user, onLogout }) {
           )}
         </nav>
 
-        {/* User */}
         <div style={{ marginTop: 'auto', padding: '16px 12px', borderTop: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: M3.outlineVar, marginBottom: 8, border: `1px solid ${M3.outline}` }}>
             <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg, ${M3.buyerCont}, #0369a1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: M3.buyer }}>
@@ -372,10 +360,8 @@ export default function BuyerDashboard({ user, onLogout }) {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main style={{ flex: 1, marginLeft: 256 }}>
 
-        {/* Topbar */}
         <header style={{ background: `${M3.surface}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${M3.outline}`, padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>
@@ -403,7 +389,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                 <RefreshCw size={15} className={isOrdersLoading ? 'animate-spin' : ''} />
               </button>
             )}
-            {/* Cart badge */}
             {cart.length > 0 && (
               <button onClick={() => setActiveTab('shop')} style={{ position: 'relative', width: 40, height: 40, borderRadius: 20, background: M3.buyerCont, border: `1px solid ${M3.buyer}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.buyer }}>
                 <ShoppingCart size={16} />
@@ -417,7 +402,6 @@ export default function BuyerDashboard({ user, onLogout }) {
 
         <div style={{ padding: '32px' }}>
 
-          {/* Alerts */}
           {error && (
             <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 14, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={15} />{error}</div>
@@ -431,11 +415,9 @@ export default function BuyerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── SHOP TAB ── */}
           {activeTab === 'shop' && (
             <div style={{ display: 'flex', gap: 24 }}>
 
-              {/* Products grid */}
               <div style={{ flex: 1 }}>
                 {isLoading ? (
                   <div style={{ padding: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
@@ -461,7 +443,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                           transition: 'all 0.2s',
                           boxShadow: inCart > 0 ? `0 0 0 1px ${M3.buyer}33` : 'none',
                         }}>
-                          {/* Card top accent */}
                           {inCart > 0 && <div style={{ height: 3, background: M3.buyer }} />}
 
                           <div style={{ padding: '18px 18px 14px', borderBottom: `1px solid ${M3.outlineVar}` }}>
@@ -521,11 +502,9 @@ export default function BuyerDashboard({ user, onLogout }) {
                 )}
               </div>
 
-              {/* Cart panel */}
               {cart.length > 0 && (
                 <div style={{ width: 300, flexShrink: 0 }}>
                   <div style={{ background: M3.surface, border: `1px solid ${M3.buyer}44`, borderRadius: 20, overflow: 'hidden', position: 'sticky', top: 88 }}>
-                    {/* Cart header */}
                     <div style={{ padding: '18px 20px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${M3.buyer}08` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <ShoppingCart size={16} color={M3.buyer} />
@@ -536,7 +515,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                       </span>
                     </div>
 
-                    {/* Cart items */}
                     <div style={{ padding: '12px', maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {cart.map(i => (
                         <div key={i.product.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: M3.outlineVar, borderRadius: 14, border: `1px solid ${M3.outline}` }}>
@@ -557,7 +535,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                       ))}
                     </div>
 
-                    {/* Cart footer */}
                     <div style={{ padding: '16px 20px', borderTop: `1px solid ${M3.outlineVar}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</span>
@@ -577,11 +554,9 @@ export default function BuyerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── ORDERS TAB ── */}
           {activeTab === 'orders' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Order stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {[
                   { label: 'Orders Placed',  value: orders.length,               sub: 'Total orders',           accent: M3.buyer,   icon: ClipboardList },
@@ -605,7 +580,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                 ))}
               </div>
 
-              {/* Orders list */}
               <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -639,7 +613,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                   <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[...orders].reverse().map((order) => (
                       <div key={order.id} style={{ borderRadius: 16, border: `1px solid ${M3.outline}`, overflow: 'hidden', background: M3.surfaceVar }}>
-                        {/* Order header */}
                         <div style={{ padding: '13px 18px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: M3.outlineVar }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, fontFamily: 'monospace' }}>ORDER #{order.id}</span>
@@ -652,7 +625,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                             <span style={{ fontSize: 15, fontWeight: 800, color: M3.green }}>${Number(order.totalPrice).toFixed(2)}</span>
                           </div>
                         </div>
-                        {/* Order items */}
                         <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {order.items?.map((item, i) => (
                             <div key={item.id ?? i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: M3.surface, borderRadius: 12, border: `1px solid ${M3.outlineVar}` }}>
@@ -680,11 +652,9 @@ export default function BuyerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── ANALYTICS TAB ── */}
           {activeTab === 'analytics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Stat cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {[
                   { label: 'Total Spent',       value: `$${totalSpent.toFixed(2)}`,    sub: 'Across all orders',           accent: M3.buyer,    icon: TrendingUp },
@@ -708,10 +678,8 @@ export default function BuyerDashboard({ user, onLogout }) {
                 ))}
               </div>
 
-              {/* Row 2 — Most purchased + Category spend donut */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-                {/* Most purchased products */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Most Purchased Products</p>
                   <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Units bought per product</p>
@@ -729,7 +697,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                   )}
                 </div>
 
-                {/* Spending by category donut */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Spending by Category</p>
                   <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Total amount spent per category</p>
@@ -761,7 +728,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Row 3 — Shopping Insights */}
               {(() => {
                 const favFarmerMap = allItems.reduce((acc, i) => {
                   acc[i.farmerUsername] = (acc[i.farmerUsername] || 0) + (i.quantity || 0);
@@ -859,14 +825,11 @@ export default function BuyerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── SETTINGS TAB ── */}
           {activeTab === 'settings' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start', maxWidth: 900 }}>
 
-              {/* LEFT — Profile + Password */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Profile card */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ height: 80, background: `linear-gradient(135deg, ${M3.buyerCont}cc, #0369a188, #082f49)`, borderBottom: `1px solid ${M3.outline}` }} />
                   <div style={{ padding: '0 24px 24px' }}>
@@ -882,7 +845,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                         <span style={{ fontSize: 11, color: M3.green, fontWeight: 600 }}>Active</span>
                       </div>
                     </div>
-                    {/* Stats grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, marginTop: 18, background: M3.outline, borderRadius: 14, overflow: 'hidden' }}>
                       {[
                         { label: 'Orders',   value: orders.length },
@@ -898,7 +860,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Change password */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ padding: '18px 22px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 11, background: `${M3.buyer}18`, border: `1px solid ${M3.buyer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -923,10 +884,8 @@ export default function BuyerDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* RIGHT — Account info + Danger zone */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Account info */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 22 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: M3.text, marginBottom: 16 }}>Account Information</p>
                   {[
@@ -942,7 +901,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                   ))}
                 </div>
 
-                {/* Danger zone */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.error}55`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ padding: '16px 22px', borderBottom: `1px solid ${M3.error}22`, background: `linear-gradient(135deg, ${M3.errorCont}44, ${M3.errorCont}11)`, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 10, background: `${M3.error}18`, border: `1px solid ${M3.error}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -955,7 +913,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                   </div>
                   <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                    {/* Sign out */}
                     <div style={{ borderRadius: 14, border: `1px solid ${M3.outline}`, overflow: 'hidden' }}>
                       <div style={{ padding: '13px 16px', background: M3.outlineVar }}>
                         <p style={{ fontSize: 13, fontWeight: 600, color: M3.text }}>Sign Out</p>
@@ -968,7 +925,6 @@ export default function BuyerDashboard({ user, onLogout }) {
                       </div>
                     </div>
 
-                    {/* Delete account */}
                     <div style={{ borderRadius: 14, border: `1px solid ${M3.error}44`, overflow: 'hidden' }}>
                       <div style={{ padding: '13px 16px', background: `${M3.errorCont}22` }}>
                         <p style={{ fontSize: 13, fontWeight: 700, color: M3.error }}>Delete My Account</p>

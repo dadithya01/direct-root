@@ -20,7 +20,6 @@ const M3 = {
   textLow:     '#8e8eaa',
 };
 
-// ── Scroll animation hook ──
 function useScrollReveal() {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -37,7 +36,6 @@ function useScrollReveal() {
   return [ref, visible];
 }
 
-// ── Reveal wrapper ──
 function Reveal({ children, delay = 0, direction = 'up' }) {
   const [ref, visible] = useScrollReveal();
   const transforms = { up: 'translateY(40px)', left: 'translateX(-40px)', right: 'translateX(40px)', scale: 'scale(0.92)' };
@@ -52,7 +50,6 @@ function Reveal({ children, delay = 0, direction = 'up' }) {
   );
 }
 
-// ── Animated number counter ──
 function AnimatedCounter({ target, suffix, color, started }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -79,7 +76,7 @@ export default function LandingPage({ onGetStarted, user }) {
   const [scrolled, setScrolled]             = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [statsStarted, setStatsStarted]     = useState(false);
-  const [modal, setModal]                   = useState(null); // null | 'about' | 'privacy' | 'terms'
+  const [modal, setModal]                   = useState(null);
   const statsRef                            = useRef(null);
 
   useEffect(() => {
@@ -92,7 +89,6 @@ export default function LandingPage({ onGetStarted, user }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Trigger counters when stats section enters view
   useEffect(() => {
     const el = statsRef.current;
     if (!el) return;
@@ -106,7 +102,6 @@ export default function LandingPage({ onGetStarted, user }) {
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-  // ── Footer link actions ──
   const footerLinks = {
     'Features':       () => scrollTo('tour-features'),
     'How it works':   () => scrollTo('how-it-works'),
@@ -122,7 +117,6 @@ export default function LandingPage({ onGetStarted, user }) {
     'Terms of Use':   () => setModal('terms'),
   };
 
-  // ── Modal content ──
   const MODALS = {
     about: {
       title: 'About DirectRoot',
@@ -214,7 +208,6 @@ For questions about these terms, email support@directroot.lk.`,
     { step: '03', icon: Zap,      color: M3.yellow,  title: 'Transact Directly', desc: 'Place orders and connect directly — no middlemen involved.' },
   ];
 
-  // Glassmorphism card style
   const glassCard = (color = M3.primary) => ({
     background: 'rgba(26, 29, 39, 0.6)',
     backdropFilter: 'blur(20px)',
@@ -230,7 +223,6 @@ For questions about these terms, email support@directroot.lk.`,
   return (
     <div style={{ background: M3.bg, color: M3.text, fontFamily: "'Google Sans','Roboto',system-ui,sans-serif", overflowX: 'hidden' }}>
 
-      {/* ── Global styles ── */}
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @keyframes float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-12px);} }
@@ -247,7 +239,6 @@ For questions about these terms, email support@directroot.lk.`,
         }
       `}</style>
 
-      {/* ── Navbar ── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: scrolled ? 'rgba(15,17,23,0.85)' : 'transparent',
@@ -279,11 +270,9 @@ For questions about these terms, email support@directroot.lk.`,
         >
           Sign In <ArrowRight size={14} />
         </button>
-        {/* Scroll progress bar */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, height: 2, background: `linear-gradient(90deg, ${M3.primary}, ${M3.green})`, width: `${scrollProgress}%`, transition: 'width 0.1s linear', borderRadius: '0 2px 2px 0', boxShadow: `0 0 8px ${M3.primary}88` }} />
       </nav>
 
-      {/* ── HERO ── */}
       <section id="tour-hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', padding: '100px 40px 80px', textAlign: 'center', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: `radial-gradient(ellipse 80% 60% at 20% 20%, rgba(74,79,168,0.35) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(52,211,153,0.2) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 60% 10%, rgba(99,102,241,0.2) 0%, transparent 50%), radial-gradient(ellipse 40% 60% at 10% 80%, rgba(109,220,145,0.15) 0%, transparent 50%)`, animation: 'pulse-glow 6s ease-in-out infinite' }} />
         <div style={{ position: 'absolute', top: '10%', right: '8%', width: 300, height: 300, borderRadius: '50%', background: 'conic-gradient(from 0deg, transparent, rgba(195,198,255,0.08), transparent, rgba(109,220,145,0.08), transparent)', animation: 'spin-slow 20s linear infinite', zIndex: 0 }} />
@@ -339,7 +328,6 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </section>
 
-      {/* ── STATS ── */}
       <section id="tour-stats" style={{ padding: '80px 40px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
         <span id="stats" style={{ position: 'absolute', top: -64 }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 80% at 50% 50%, rgba(74,79,168,0.08) 0%, transparent 70%)', zIndex: 0 }} />
@@ -360,7 +348,6 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
       <section id="tour-features" style={{ padding: '100px 40px', position: 'relative', overflow: 'hidden' }}>
         <span id="features" style={{ position: 'absolute', top: -64 }} />
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: `radial-gradient(ellipse 50% 60% at 0% 50%, rgba(52,211,153,0.07) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 100% 50%, rgba(74,79,168,0.07) 0%, transparent 60%)` }} />
@@ -410,7 +397,6 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
       <section id="how-it-works" style={{ padding: '100px 40px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 50% at 50% 100%, rgba(109,220,145,0.06) 0%, transparent 60%)', zIndex: 0 }} />
         <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
@@ -458,7 +444,6 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </section>
 
-      {/* ── PRICING ── */}
       <section id="pricing" style={{ padding: '100px 40px', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 70% at 50% 50%, rgba(109,220,145,0.07) 0%, transparent 65%)', zIndex: 0 }} />
         <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative', zIndex: 1 }}>
@@ -539,7 +524,6 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '48px 40px', background: 'rgba(26,29,39,0.8)', backdropFilter: 'blur(20px)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 40 }}>
           <div>
@@ -578,11 +562,9 @@ For questions about these terms, email support@directroot.lk.`,
         </div>
       </footer>
 
-      {/* ── Chatbot + Guided Tour ── */}
       <ChatBot />
       <GuidedTour onGetStarted={onGetStarted} />
 
-      {/* ── Modals (About / Privacy / Terms) ── */}
       {modal && (
         <>
           <div onClick={() => setModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 3000 }} />

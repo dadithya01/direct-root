@@ -67,7 +67,6 @@ const inputStyle = (focusColor = M3.farmer) => ({
   fontFamily: 'inherit', transition: 'border-color 0.15s',
 });
 
-// ── Outside component to prevent focus loss on re-render ──
 const FarmerPwInput = ({ label, field, placeholder, value, onChange, show, onToggleShow }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</label>
@@ -101,22 +100,18 @@ export default function FarmerDashboard({ user, onLogout }) {
   const [success, setSuccess]           = useState(null);
   const [searchQuery, setSearchQuery]   = useState('');
 
-  // Post form
   const [form, setForm] = useState({ name: '', category: '', price: '', quantity: '', description: '' });
 
-  // Edit state
   const [editingId, setEditingId]     = useState(null);
   const [editForm, setEditForm]       = useState({});
   const [isSaving, setIsSaving]       = useState(false);
 
-  // Settings state
   const [pwForm, setPwForm]           = useState({ current: '', newPw: '', confirm: '' });
   const [showPw, setShowPw]           = useState({ current: false, newPw: false, confirm: false });
   const [pwError, setPwError]         = useState(null);
   const [pwSuccess, setPwSuccess]     = useState(null);
   const [isPwLoading, setIsPwLoading] = useState(false);
 
-  // Orders / Analytics state
   const [orders, setOrders]             = useState([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
 
@@ -176,7 +171,6 @@ export default function FarmerDashboard({ user, onLogout }) {
     finally { setIsSubmitting(false); }
   };
 
-  // ── Start editing a product ──
   const startEdit = (p) => {
     setEditingId(p.id);
     setEditForm({
@@ -190,7 +184,6 @@ export default function FarmerDashboard({ user, onLogout }) {
 
   const cancelEdit = () => { setEditingId(null); setEditForm({}); };
 
-  // ── Change Password ──
   const handleChangePassword = async () => {
     setPwError(null); setPwSuccess(null);
     if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) { setPwError('All fields are required.'); return; }
@@ -212,7 +205,6 @@ export default function FarmerDashboard({ user, onLogout }) {
     finally { setIsPwLoading(false); }
   };
 
-  // ── Save updated product ──
   const saveEdit = async (id) => {
     if (!editForm.name || !editForm.category || !editForm.price || !editForm.quantity) {
       setError('All required fields must be filled.'); return;
@@ -236,7 +228,6 @@ export default function FarmerDashboard({ user, onLogout }) {
     finally { setIsSaving(false); }
   };
 
-  // ── Filtered products ──
   const filteredProducts = products.filter(p =>
     p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -266,7 +257,6 @@ export default function FarmerDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans', 'Roboto', system-ui, sans-serif", color: M3.text }}>
 
-      {/* ── Sidebar ── */}
       <aside style={{ width: 256, background: M3.surface, borderRight: `1px solid ${M3.outline}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 20 }}>
         <div style={{ padding: '28px 20px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -308,7 +298,6 @@ export default function FarmerDashboard({ user, onLogout }) {
             );
           })}
 
-          {/* Quick Stats */}
           <div style={{ marginTop: 16, padding: 16, borderRadius: 16, background: M3.outlineVar, border: `1px solid ${M3.outline}` }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Quick Stats</p>
             {[
@@ -324,7 +313,6 @@ export default function FarmerDashboard({ user, onLogout }) {
           </div>
         </nav>
 
-        {/* User */}
         <div style={{ padding: '16px 12px', borderTop: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: M3.outlineVar, marginBottom: 8, border: `1px solid ${M3.outline}` }}>
             <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg, ${M3.farmerCont}, #059669)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: M3.farmer }}>
@@ -344,10 +332,8 @@ export default function FarmerDashboard({ user, onLogout }) {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main style={{ flex: 1, marginLeft: 256 }}>
 
-        {/* Topbar */}
         <header style={{ background: `${M3.surface}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${M3.outline}`, padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>
@@ -358,7 +344,6 @@ export default function FarmerDashboard({ user, onLogout }) {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Search — only on listings */}
             {activeTab === 'listings' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: '8px 14px', width: 220 }}>
                 <Search size={14} color={M3.textLow} />
@@ -396,7 +381,6 @@ export default function FarmerDashboard({ user, onLogout }) {
 
         <div style={{ padding: '32px' }}>
 
-          {/* Alerts */}
           {error && (
             <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 14, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 600 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={15} />{error}</div>
@@ -410,11 +394,9 @@ export default function FarmerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── LISTINGS TAB ── */}
           {activeTab === 'listings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Stat Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {[
                   { label: 'Total Listed',     value: products.length,          sub: 'Products on marketplace', icon: Wheat,      accent: M3.farmer },
@@ -438,7 +420,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                 ))}
               </div>
 
-              {/* Products table */}
               <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -505,7 +486,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                               )}
                             </td>
 
-                            {/* Category */}
                             <td style={{ padding: '14px 20px' }}>
                               {isEditing ? (
                                 <select value={editForm.category || ''} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
@@ -518,7 +498,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                               ) : <CatChip category={p.category} />}
                             </td>
 
-                            {/* Price */}
                             <td style={{ padding: '14px 20px' }}>
                               {isEditing ? (
                                 <div style={{ position: 'relative', width: 90 }}>
@@ -532,7 +511,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                               ) : <span style={{ fontSize: 14, fontWeight: 800, color: M3.farmer }}>${Number(p.price).toFixed(2)}</span>}
                             </td>
 
-                            {/* Stock */}
                             <td style={{ padding: '14px 20px' }}>
                               {isEditing ? (
                                 <div style={{ position: 'relative', width: 80 }}>
@@ -562,7 +540,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                               )}
                             </td>
 
-                            {/* Listed date */}
                             <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 11, color: M3.textLow }}>
                               {isEditing ? (
                                 <span style={{ fontSize: 11, color: M3.textLow }}>Editing...</span>
@@ -571,7 +548,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                               )}
                             </td>
 
-                            {/* Actions */}
                             <td style={{ padding: '14px 20px' }}>
                               {isEditing ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -618,11 +594,9 @@ export default function FarmerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── POST TAB ── */}
           {activeTab === 'post' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20, alignItems: 'start' }}>
 
-              {/* Form */}
               <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
                 <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.farmer}18`, border: `1px solid ${M3.farmer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -635,7 +609,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                 </div>
 
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  {/* Name */}
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Product Name *</label>
                     <div style={{ position: 'relative' }}>
@@ -647,7 +620,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Category */}
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Category *</label>
                     <div style={{ position: 'relative' }}>
@@ -662,7 +634,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Price + Qty */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Price (USD) *</label>
@@ -686,7 +657,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* Description */}
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Description</label>
                     <div style={{ position: 'relative' }}>
@@ -706,7 +676,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Preview + Tips */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
                   <div style={{ padding: '16px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
@@ -752,9 +721,7 @@ export default function FarmerDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── ANALYTICS TAB ── */}
           {activeTab === 'analytics' && (() => {
-            // ── Derived analytics data ──
             const farmerItems = orders.flatMap(o =>
               (o.items || []).filter(i => i.farmerUsername === user?.username)
             );
@@ -763,7 +730,6 @@ export default function FarmerDashboard({ user, onLogout }) {
             const totalOrders     = orders.filter(o => (o.items || []).some(i => i.farmerUsername === user?.username)).length;
             const totalUnitsSold  = farmerItems.reduce((s, i) => s + (i.quantity || 0), 0);
 
-            // Best selling products
             const salesMap = farmerItems.reduce((acc, i) => {
               acc[i.productName] = (acc[i.productName] || 0) + (i.quantity || 0);
               return acc;
@@ -773,7 +739,6 @@ export default function FarmerDashboard({ user, onLogout }) {
               .sort((a, b) => b.units - a.units)
               .slice(0, 6);
 
-            // Category breakdown from products
             const catMap = products.reduce((acc, p) => {
               const c = p.category || 'Other';
               acc[c] = (acc[c] || 0) + 1;
@@ -781,7 +746,6 @@ export default function FarmerDashboard({ user, onLogout }) {
             }, {});
             const categoryData = Object.entries(catMap).map(([name, count]) => ({ name, count }));
 
-            // Stock levels
             const stockData = products.map(p => ({
               name: p.name?.length > 10 ? p.name.slice(0, 10) + '…' : p.name,
               stock: p.quantity,
@@ -804,7 +768,6 @@ export default function FarmerDashboard({ user, onLogout }) {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Summary stat cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                   {[
                     { label: 'Total Revenue',   value: `$${totalRevenue.toFixed(2)}`, sub: 'From all orders',        accent: M3.farmer,  icon: TrendingUp },
@@ -831,10 +794,8 @@ export default function FarmerDashboard({ user, onLogout }) {
                   ))}
                 </div>
 
-                {/* Row 2 — Best Selling + Category Donut */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-                  {/* Best Selling Products */}
                   <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                     <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Best Selling Products</p>
                     <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Units sold per product</p>
@@ -854,7 +815,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                     )}
                   </div>
 
-                  {/* Category Breakdown Donut */}
                   <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                     <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Category Breakdown</p>
                     <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Products listed per category</p>
@@ -886,7 +846,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Row 3 — Stock Levels */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Stock Levels</p>
                   <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 20 }}>Current quantity available per product</p>
@@ -906,7 +865,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                       </BarChart>
                     </ResponsiveContainer>
                   )}
-                  {/* Legend */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 12 }}>
                     {[
                       { color: M3.farmer, label: 'Good stock' },
@@ -925,16 +883,12 @@ export default function FarmerDashboard({ user, onLogout }) {
             );
           })()}
 
-          {/* ── SETTINGS TAB ── */}
           {activeTab === 'settings' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start', maxWidth: 900 }}>
 
-              {/* LEFT — Profile + Password */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Profile Card */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
-                  {/* Banner */}
                   <div style={{ height: 80, background: `linear-gradient(135deg, ${M3.farmerCont}cc, #065f4688, #022c22)`, borderBottom: `1px solid ${M3.outline}` }} />
                   <div style={{ padding: '0 24px 24px', position: 'relative' }}>
                     <div style={{
@@ -958,7 +912,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                       </div>
                     </div>
 
-                    {/* Stats */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, marginTop: 18, background: M3.outline, borderRadius: 14, overflow: 'hidden' }}>
                       {[
                         { label: 'Products', value: products.length },
@@ -974,7 +927,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Change Password */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ padding: '18px 22px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 11, background: `${M3.farmer}18`, border: `1px solid ${M3.farmer}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1019,10 +971,8 @@ export default function FarmerDashboard({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* RIGHT — Account Info + Tips */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* Account info */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 22 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: M3.text, marginBottom: 16 }}>Account Information</p>
                   {[
@@ -1038,7 +988,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                   ))}
                 </div>
 
-                {/* Password tips */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, padding: 22 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: M3.text, marginBottom: 14 }}>🔒 Password Security Tips</p>
                   {[
@@ -1054,7 +1003,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                   ))}
                 </div>
 
-                {/* Danger Zone */}
                 <div style={{ background: M3.surface, border: `1px solid ${M3.error}55`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ padding: '16px 22px', borderBottom: `1px solid ${M3.error}22`, background: `linear-gradient(135deg, ${M3.errorCont}44, ${M3.errorCont}11)`, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 10, background: `${M3.error}18`, border: `1px solid ${M3.error}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1067,7 +1015,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                   </div>
                   <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-                    {/* Sign out */}
                     <div style={{ borderRadius: 14, border: `1px solid ${M3.outline}`, overflow: 'hidden' }}>
                       <div style={{ padding: '13px 16px', background: M3.outlineVar }}>
                         <p style={{ fontSize: 13, fontWeight: 600, color: M3.text }}>Sign Out</p>
@@ -1080,7 +1027,6 @@ export default function FarmerDashboard({ user, onLogout }) {
                       </div>
                     </div>
 
-                    {/* Delete account */}
                     <div style={{ borderRadius: 14, border: `1px solid ${M3.error}44`, overflow: 'hidden' }}>
                       <div style={{ padding: '13px 16px', background: `${M3.errorCont}22` }}>
                         <p style={{ fontSize: 13, fontWeight: 700, color: M3.error }}>Delete My Account</p>

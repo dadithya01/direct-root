@@ -15,7 +15,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class ChatController {
 
-    @Value("${groq.api.key}")
+    @Value("${app.api.key}")
     private String groqApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();

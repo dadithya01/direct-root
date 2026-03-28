@@ -136,7 +136,6 @@ export default function AdminDashboard({ user, onLogout }) {
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [fetchError, setFetchError]         = useState(null);
 
-  // Settings state
   const [pwForm, setPwForm]                 = useState({ current: '', newPw: '', confirm: '' });
   const [showPw, setShowPw]                 = useState({ current: false, newPw: false, confirm: false });
   const [pwError, setPwError]               = useState(null);
@@ -145,24 +144,18 @@ export default function AdminDashboard({ user, onLogout }) {
   const [clearLogsLoading, setClearLogsLoading] = useState(false);
   const [clearLogsSuccess, setClearLogsSuccess] = useState(null);
 
-  // ── Notification state ──
-  // lastSeenCount tracks how many activities were seen when panel was last opened
   const [showNotifications, setShowNotifications]   = useState(false);
   const [lastSeenCount, setLastSeenCount]           = useState(0);
   const autoCloseTimer                               = useRef(null);
 
-  // New (unseen) activities = anything added since last time panel was opened
-  // Only count within the 5 we show
   const visibleActivities = activities.slice(0, 5);
   const unseenActivities  = activities.slice(0, activities.length - lastSeenCount);
   const hasUnseen         = unseenActivities.length > 0;
 
   const openNotifications = () => {
     setShowNotifications(true);
-    // Start 5s auto-close timer
     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
     autoCloseTimer.current = setTimeout(() => {
-      // Mark all current activities as seen
       setLastSeenCount(activities.length);
       setShowNotifications(false);
     }, 5000);
@@ -170,13 +163,9 @@ export default function AdminDashboard({ user, onLogout }) {
 
   const closeNotifications = () => {
     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
-    // Mark all current activities as seen when manually closed too
     setLastSeenCount(activities.length);
     setShowNotifications(false);
   };
-
-  // When new activities arrive after panel was last seen, red dot reappears automatically
-  // because unseenActivities.length > 0
 
   const fetchActivities = async () => {
     setIsLogsLoading(true);
@@ -219,7 +208,6 @@ export default function AdminDashboard({ user, onLogout }) {
   useEffect(() => { fetchUsers(); fetchActivities(); fetchProducts(); }, []);
   useEffect(() => { if (activeTab === 'items') fetchProducts(); }, [activeTab]);
 
-  // Cleanup timer on unmount
   useEffect(() => () => { if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current); }, []);
 
   const deleteUser = async (id) => {
@@ -331,7 +319,6 @@ export default function AdminDashboard({ user, onLogout }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans', 'Roboto', system-ui, sans-serif", color: M3.text }}>
 
-      {/* ── Sidebar ── */}
       <aside style={{ width: 256, background: M3.surface, borderRight: `1px solid ${M3.outline}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 20 }}>
         <div style={{ padding: '28px 20px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -388,10 +375,8 @@ export default function AdminDashboard({ user, onLogout }) {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <main style={{ flex: 1, marginLeft: 256, display: 'flex', flexDirection: 'column' }}>
 
-        {/* Topbar */}
         <header style={{ background: `${M3.surface}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${M3.outline}`, padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>
             {activeTab === 'overview' ? 'Dashboard Overview' : activeTab === 'users' ? 'User Management' : activeTab === 'items' ? 'Product Listings' : activeTab === 'analytics' ? 'Analytics' : 'Settings'}
@@ -405,7 +390,6 @@ export default function AdminDashboard({ user, onLogout }) {
               <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             </button>
 
-            {/* ── Bell + Notification Panel ── */}
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => showNotifications ? closeNotifications() : openNotifications()}
@@ -419,7 +403,6 @@ export default function AdminDashboard({ user, onLogout }) {
                 }}
               >
                 <Bell size={16} />
-                {/* Red dot — only shows when there are unseen activities */}
                 {hasUnseen && (
                   <span style={{
                     position: 'absolute', top: 7, right: 7,
@@ -431,17 +414,14 @@ export default function AdminDashboard({ user, onLogout }) {
 
               {showNotifications && (
                 <>
-                  {/* Backdrop */}
                   <div onClick={closeNotifications} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
 
-                  {/* Panel */}
                   <div style={{
                     position: 'absolute', top: 48, right: 0, width: 360,
                     background: M3.surface, border: `1px solid ${M3.outline}`,
                     borderRadius: 20, zIndex: 50, overflow: 'hidden',
                     boxShadow: `0 8px 32px #00000066, 0 0 0 1px ${M3.outline}`,
                   }}>
-                    {/* Header */}
                     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Bell size={15} color={M3.primary} />
@@ -454,7 +434,6 @@ export default function AdminDashboard({ user, onLogout }) {
                       )}
                     </div>
 
-                    {/* Activity list */}
                     <div style={{ maxHeight: 420, overflowY: 'auto' }}>
                       {activities.length === 0 || unseenActivities.length === 0 ? (
                         <div style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -468,7 +447,6 @@ export default function AdminDashboard({ user, onLogout }) {
                             const isDelete   = a.action?.toLowerCase().includes('delete');
                             const isRegister = a.action?.toLowerCase().includes('register');
                             const iconColor  = isDelete ? M3.error : isRegister ? M3.green : M3.primary;
-                            // All items shown are unseen — mark all as new
                             const isNew = true;
 
                             return (
@@ -479,7 +457,6 @@ export default function AdminDashboard({ user, onLogout }) {
                                 background: isNew ? `${M3.primary}08` : 'transparent',
                                 transition: 'background 0.15s',
                               }}>
-                                {/* New indicator dot */}
                                 <div style={{ display: 'flex', alignItems: 'center', paddingTop: 6 }}>
                                   {isNew
                                     ? <div style={{ width: 7, height: 7, borderRadius: '50%', background: M3.primary, flexShrink: 0 }} />
@@ -505,7 +482,6 @@ export default function AdminDashboard({ user, onLogout }) {
                       )}
                     </div>
 
-                    {/* Footer */}
                     <div style={{ padding: '12px 20px', borderTop: `1px solid ${M3.outlineVar}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <button
                         onClick={() => { setActiveTab('overview'); closeNotifications(); }}
@@ -534,7 +510,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── OVERVIEW ── */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
@@ -614,7 +589,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── USERS ── */}
           {activeTab === 'users' && (
             <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
               <div style={{ padding: '22px 28px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -681,7 +655,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── PRODUCTS ── */}
           {activeTab === 'items' && (
             <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
               <div style={{ padding: '22px 28px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -752,7 +725,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── ANALYTICS ── */}
           {activeTab === 'analytics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -841,7 +813,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
-          {/* ── SETTINGS ── */}
           {activeTab === 'settings' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
