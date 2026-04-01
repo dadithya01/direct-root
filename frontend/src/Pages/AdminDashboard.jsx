@@ -5,6 +5,7 @@ import {
   Wheat, TrendingUp, ShieldCheck, Trash2, RefreshCw,
   Bell, Settings, ArrowUpRight, Package, ChevronRight,
   User, Lock, AlertTriangle, CheckCircle, Eye, EyeOff,
+  FileSignature,
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -67,12 +68,25 @@ const Chip = ({ role, category }) => {
   );
 };
 
+const ContractStatusBadge = ({ status }) => {
+  const map = {
+    PENDING:   { bg: '#713f1222', color: '#fde047', border: '#713f1255', label: 'Open' },
+    APPLIED:   { bg: '#0c4a6e22', color: '#7dd3fc', border: '#0c4a6e55', label: 'Applied' },
+    ACTIVE:    { bg: '#00391722', color: '#6ddc91', border: '#00391755', label: 'Active' },
+    COMPLETED: { bg: '#1f223022', color: '#8e8eaa', border: '#2e315055', label: 'Completed' },
+    CANCELLED: { bg: '#93000622', color: '#ffb4ab', border: '#93000655', label: 'Cancelled' },
+  };
+  const s = map[status] || map.PENDING;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700 }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
+      {s.label}
+    </span>
+  );
+};
+
 const StatCard = ({ label, value, sub, icon: Icon, accent }) => (
-  <div style={{
-    background: M3.surface, border: `1px solid ${M3.outline}`,
-    borderRadius: 20, padding: '22px 24px',
-    position: 'relative', overflow: 'hidden',
-  }}>
+  <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: '22px 24px', position: 'relative', overflow: 'hidden' }}>
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accent, borderRadius: '20px 20px 0 0' }} />
     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
       <div style={{ width: 44, height: 44, borderRadius: 14, background: `${accent}22`, border: `1px solid ${accent}44`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -109,11 +123,7 @@ const PwInput = ({ label, placeholder, value, onChange, show, onToggleShow }) =>
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          width: '100%', padding: '12px 44px 12px 16px', borderRadius: 12,
-          background: M3.surfaceVar, border: `1px solid ${M3.outline}`,
-          color: M3.text, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-        }}
+        style={{ width: '100%', padding: '12px 44px 12px 16px', borderRadius: 12, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, color: M3.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
         onFocus={e => e.target.style.borderColor = M3.primary}
         onBlur={e => e.target.style.borderColor = M3.outline}
       />
@@ -144,23 +154,23 @@ export default function AdminDashboard({ user, onLogout }) {
   const [clearLogsLoading, setClearLogsLoading] = useState(false);
   const [clearLogsSuccess, setClearLogsSuccess] = useState(null);
 
-  const [showNotifications, setShowNotifications]   = useState(false);
-  const [lastSeenCount, setLastSeenCount]           = useState(0);
-  const autoCloseTimer                               = useRef(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [lastSeenCount, setLastSeenCount]         = useState(0);
+  const autoCloseTimer                             = useRef(null);
 
-  const visibleActivities = activities.slice(0, 5);
-  const unseenActivities  = activities.slice(0, activities.length - lastSeenCount);
-  const hasUnseen         = unseenActivities.length > 0;
+  // ── Contracts state ──
+  const [allContracts, setAllContracts]           = useState([]);
+  const [isContractsLoading, setIsContractsLoading] = useState(false);
+  const [contractStatusFilter, setContractStatusFilter] = useState('ALL');
+
+  const unseenActivities = activities.slice(0, activities.length - lastSeenCount);
+  const hasUnseen        = unseenActivities.length > 0;
 
   const openNotifications = () => {
     setShowNotifications(true);
     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
-    autoCloseTimer.current = setTimeout(() => {
-      setLastSeenCount(activities.length);
-      setShowNotifications(false);
-    }, 5000);
+    autoCloseTimer.current = setTimeout(() => { setLastSeenCount(activities.length); setShowNotifications(false); }, 5000);
   };
-
   const closeNotifications = () => {
     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
     setLastSeenCount(activities.length);
@@ -170,9 +180,7 @@ export default function AdminDashboard({ user, onLogout }) {
   const fetchActivities = async () => {
     setIsLogsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/activity`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-      });
+      const res = await fetch(`${API_BASE_URL}/activity`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` } });
       const result = await res.json();
       setActivities(result.data || (Array.isArray(result) ? result : []));
     } catch { setActivities([]); }
@@ -183,9 +191,7 @@ export default function AdminDashboard({ user, onLogout }) {
     if (!user?.token) return;
     setIsLoading(true); setFetchError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
-      });
+      const res = await fetch(`${API_BASE_URL}/admin`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` } });
       if (!res.ok) throw new Error('Failed to fetch users');
       const result = await res.json();
       setUsers(result.data || []);
@@ -196,26 +202,38 @@ export default function AdminDashboard({ user, onLogout }) {
   const fetchProducts = async () => {
     setIsProductsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/products`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-      });
+      const res = await fetch(`${API_BASE_URL}/products`, { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` } });
       const result = await res.json();
       setProducts(Array.isArray(result) ? result : result.data || []);
     } catch { setProducts([]); }
     finally { setIsProductsLoading(false); }
   };
 
+  const fetchAllContracts = async () => {
+    setIsContractsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/contracts`, { headers: { Authorization: `Bearer ${user?.token}` } });
+      const result = await res.json();
+      setAllContracts(Array.isArray(result) ? result : result.data || []);
+    } catch { setAllContracts([]); }
+    finally { setIsContractsLoading(false); }
+  };
+
+  const handleCompleteContract = async (contractId) => {
+    try {
+      await fetch(`${API_BASE_URL}/contracts/${contractId}/complete`, { method: 'PUT', headers: { Authorization: `Bearer ${user?.token}` } });
+      fetchAllContracts();
+    } catch (e) { console.error(e); }
+  };
+
   useEffect(() => { fetchUsers(); fetchActivities(); fetchProducts(); }, []);
   useEffect(() => { if (activeTab === 'items') fetchProducts(); }, [activeTab]);
-
+  useEffect(() => { if (activeTab === 'contracts') fetchAllContracts(); }, [activeTab]);
   useEffect(() => () => { if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current); }, []);
 
   const deleteUser = async (id) => {
-    try {
-      await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` },
-      });
-    } catch (e) { console.error(e); }
+    try { await fetch(`${API_BASE_URL}/admin/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` } }); }
+    catch (e) { console.error(e); }
     finally { await fetchUsers(); await fetchActivities(); }
   };
 
@@ -227,11 +245,7 @@ export default function AdminDashboard({ user, onLogout }) {
     if (pwForm.current === pwForm.newPw) { setPwError('New password must be different.'); return; }
     setIsPwLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` },
-        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }),
-      });
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user?.token}` }, body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }) });
       if (!res.ok) throw new Error('Current password is incorrect.');
       setPwSuccess('Password changed! Signing out...');
       setPwForm({ current: '', newPw: '', confirm: '' });
@@ -244,9 +258,7 @@ export default function AdminDashboard({ user, onLogout }) {
     if (!confirm('Clear all activity logs? This cannot be undone.')) return;
     setClearLogsLoading(true);
     try {
-      await fetch(`${API_BASE_URL}/activity/clear`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${user?.token}` },
-      });
+      await fetch(`${API_BASE_URL}/activity/clear`, { method: 'DELETE', headers: { Authorization: `Bearer ${user?.token}` } });
       setClearLogsSuccess('All logs cleared successfully.');
       setLastSeenCount(0);
       await fetchActivities();
@@ -254,15 +266,9 @@ export default function AdminDashboard({ user, onLogout }) {
     finally { setClearLogsLoading(false); }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredProducts = products.filter(p =>
-    p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.farmerUsername?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers    = users.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase()) || u.role?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || p.category?.toLowerCase().includes(searchQuery.toLowerCase()) || p.farmerUsername?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredContracts = contractStatusFilter === 'ALL' ? allContracts : allContracts.filter(c => c.status === contractStatusFilter);
 
   const admins  = filteredUsers.filter(u => u.role === 'ADMIN');
   const farmers = filteredUsers.filter(u => u.role === 'FARMER');
@@ -276,13 +282,8 @@ export default function AdminDashboard({ user, onLogout }) {
     { name: 'Buyers',  value: users.filter(u => u.role === 'BUYER').length,  color: '#7dd3fc' },
   ].filter(d => d.value > 0);
 
-  const catCounts = products.reduce((acc, p) => {
-    const cat = p.category || 'Other';
-    acc[cat] = (acc[cat] || 0) + 1;
-    return acc;
-  }, {});
+  const catCounts = products.reduce((acc, p) => { const cat = p.category || 'Other'; acc[cat] = (acc[cat] || 0) + 1; return acc; }, {});
   const categoryBarData = Object.entries(catCounts).map(([name, count]) => ({ name, count }));
-
   const registrations = activities.filter(a => a.action?.toLowerCase().includes('register')).length;
   const deletions     = activities.filter(a => a.action?.toLowerCase().includes('delete')).length;
   const activitySummaryData = [
@@ -294,15 +295,16 @@ export default function AdminDashboard({ user, onLogout }) {
     { label: 'Total Users',    value: users.length,      sub: `${admins.length} admins · ${farmers.length} farmers · ${buyers.length} buyers`, icon: Users,      accent: M3.primary },
     { label: 'Products',       value: products.length,   sub: 'Active marketplace listings',  icon: Package,    accent: M3.green },
     { label: 'Activity Logs',  value: activities.length, sub: 'System events recorded',       icon: Activity,   accent: M3.tertiary },
-    { label: 'Active Farmers', value: farmers.length,    sub: 'Registered on platform',        icon: TrendingUp, accent: M3.yellow },
+    { label: 'Active Farmers', value: farmers.length,    sub: 'Registered on platform',       icon: TrendingUp, accent: M3.yellow },
   ];
 
   const nav = [
-    { tab: 'overview',  icon: LayoutDashboard, label: 'Overview' },
-    { tab: 'users',     icon: Users,           label: 'Users' },
-    { tab: 'items',     icon: Wheat,           label: 'Products' },
-    { tab: 'analytics', icon: BarChart3,       label: 'Analytics' },
-    { tab: 'settings',  icon: Settings,        label: 'Settings' },
+    { tab: 'overview',   icon: LayoutDashboard, label: 'Overview' },
+    { tab: 'users',      icon: Users,           label: 'Users' },
+    { tab: 'items',      icon: Wheat,           label: 'Products' },
+    { tab: 'contracts',  icon: FileSignature,   label: 'Contracts' },
+    { tab: 'analytics',  icon: BarChart3,       label: 'Analytics' },
+    { tab: 'settings',   icon: Settings,        label: 'Settings' },
   ];
 
   const timeAgo = (timestamp) => {
@@ -316,9 +318,15 @@ export default function AdminDashboard({ user, onLogout }) {
     return new Date(timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' });
   };
 
+  const headerTitle = {
+    overview: 'Dashboard Overview', users: 'User Management', items: 'Product Listings',
+    contracts: 'Contracts', analytics: 'Analytics', settings: 'Settings',
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', background: M3.bg, fontFamily: "'Google Sans', 'Roboto', system-ui, sans-serif", color: M3.text }}>
 
+      {/* ── Sidebar ── */}
       <aside style={{ width: 256, background: M3.surface, borderRight: `1px solid ${M3.outline}`, display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 20 }}>
         <div style={{ padding: '28px 20px 20px', borderBottom: `1px solid ${M3.outlineVar}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -337,7 +345,7 @@ export default function AdminDashboard({ user, onLogout }) {
           {nav.map(({ tab, icon: Icon, label }) => {
             const active = activeTab === tab;
             return (
-              <button key={label} onClick={() => setActiveTab(tab)} style={{
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                 padding: '13px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
                 background: active ? `${M3.primary}18` : 'transparent',
@@ -375,105 +383,49 @@ export default function AdminDashboard({ user, onLogout }) {
         </div>
       </aside>
 
+      {/* ── Main ── */}
       <main style={{ flex: 1, marginLeft: 256, display: 'flex', flexDirection: 'column' }}>
 
+        {/* Header */}
         <header style={{ background: `${M3.surface}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${M3.outline}`, padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-          <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>
-            {activeTab === 'overview' ? 'Dashboard Overview' : activeTab === 'users' ? 'User Management' : activeTab === 'items' ? 'Product Listings' : activeTab === 'analytics' ? 'Analytics' : 'Settings'}
-          </h1>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: M3.text, letterSpacing: '-0.3px' }}>{headerTitle[activeTab] || 'Dashboard'}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, borderRadius: 28, padding: '9px 16px', width: 240 }}>
               <Search size={15} color={M3.textLow} />
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." style={{ background: 'none', border: 'none', outline: 'none', color: M3.text, fontSize: 13, flex: 1 }} />
             </div>
-            <button onClick={() => { fetchUsers(); fetchActivities(); fetchProducts(); }} style={{ width: 40, height: 40, borderRadius: 20, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.textMed }}>
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+            <button onClick={() => { fetchUsers(); fetchActivities(); fetchProducts(); if (activeTab === 'contracts') fetchAllContracts(); }} style={{ width: 40, height: 40, borderRadius: 20, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.textMed }}>
+              <RefreshCw size={16} />
             </button>
-
             <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => showNotifications ? closeNotifications() : openNotifications()}
-                style={{
-                  width: 40, height: 40, borderRadius: 20,
-                  background: showNotifications ? `${M3.primary}18` : M3.surfaceVar,
-                  border: `1px solid ${showNotifications ? M3.primary : M3.outline}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: showNotifications ? M3.primary : M3.textMed,
-                  position: 'relative', transition: 'all 0.15s',
-                }}
-              >
+              <button onClick={() => showNotifications ? closeNotifications() : openNotifications()} style={{ width: 40, height: 40, borderRadius: 20, background: showNotifications ? `${M3.primary}18` : M3.surfaceVar, border: `1px solid ${showNotifications ? M3.primary : M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: showNotifications ? M3.primary : M3.textMed, position: 'relative', transition: 'all 0.15s' }}>
                 <Bell size={16} />
-                {hasUnseen && (
-                  <span style={{
-                    position: 'absolute', top: 7, right: 7,
-                    width: 8, height: 8, background: M3.error,
-                    borderRadius: '50%', border: `2px solid ${M3.surface}`,
-                  }} />
-                )}
+                {hasUnseen && <span style={{ position: 'absolute', top: 7, right: 7, width: 8, height: 8, background: M3.error, borderRadius: '50%', border: `2px solid ${M3.surface}` }} />}
               </button>
-
               {showNotifications && (
                 <>
                   <div onClick={closeNotifications} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-
-                  <div style={{
-                    position: 'absolute', top: 48, right: 0, width: 360,
-                    background: M3.surface, border: `1px solid ${M3.outline}`,
-                    borderRadius: 20, zIndex: 50, overflow: 'hidden',
-                    boxShadow: `0 8px 32px #00000066, 0 0 0 1px ${M3.outline}`,
-                  }}>
+                  <div style={{ position: 'absolute', top: 48, right: 0, width: 360, background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, zIndex: 50, overflow: 'hidden', boxShadow: `0 8px 32px #00000066` }}>
                     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Bell size={15} color={M3.primary} />
-                        <p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Notifications</p>
-                      </div>
-                      {unseenActivities.length > 0 && (
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${M3.error}22`, color: M3.error, border: `1px solid ${M3.error}33` }}>
-                        {Math.min(unseenActivities.length, 5)} new
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Bell size={15} color={M3.primary} /><p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Notifications</p></div>
+                      {unseenActivities.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${M3.error}22`, color: M3.error, border: `1px solid ${M3.error}33` }}>{Math.min(unseenActivities.length, 5)} new</span>}
                     </div>
-
                     <div style={{ maxHeight: 420, overflowY: 'auto' }}>
                       {activities.length === 0 || unseenActivities.length === 0 ? (
-                        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                          <Bell size={28} color={M3.textLow} style={{ margin: '0 auto 10px' }} />
-                          <p style={{ fontSize: 13, color: M3.textLow }}>No new notifications</p>
-                          <p style={{ fontSize: 11, color: M3.textLow, marginTop: 4 }}>You're all caught up!</p>
-                        </div>
+                        <div style={{ padding: '40px 20px', textAlign: 'center' }}><Bell size={28} color={M3.textLow} style={{ margin: '0 auto 10px' }} /><p style={{ fontSize: 13, color: M3.textLow }}>No new notifications</p></div>
                       ) : (
                         <div style={{ padding: '8px 0' }}>
                           {[...unseenActivities].reverse().slice(0, 5).map((a, i) => {
-                            const isDelete   = a.action?.toLowerCase().includes('delete');
+                            const isDelete = a.action?.toLowerCase().includes('delete');
                             const isRegister = a.action?.toLowerCase().includes('register');
-                            const iconColor  = isDelete ? M3.error : isRegister ? M3.green : M3.primary;
-                            const isNew = true;
-
+                            const iconColor = isDelete ? M3.error : isRegister ? M3.green : M3.primary;
                             return (
-                              <div key={a.id ?? i} style={{
-                                display: 'flex', alignItems: 'flex-start', gap: 12,
-                                padding: '12px 20px',
-                                borderBottom: `1px solid ${M3.outlineVar}`,
-                                background: isNew ? `${M3.primary}08` : 'transparent',
-                                transition: 'background 0.15s',
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', paddingTop: 6 }}>
-                                  {isNew
-                                    ? <div style={{ width: 7, height: 7, borderRadius: '50%', background: M3.primary, flexShrink: 0 }} />
-                                    : <div style={{ width: 7, height: 7, flexShrink: 0 }} />
-                                  }
-                                </div>
-                                <div style={{ width: 32, height: 32, borderRadius: 10, background: `${iconColor}18`, border: `1px solid ${iconColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  <Activity size={13} color={iconColor} />
-                                </div>
+                              <div key={a.id ?? i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 20px', borderBottom: `1px solid ${M3.outlineVar}`, background: `${M3.primary}08` }}>
+                                <div style={{ display: 'flex', alignItems: 'center', paddingTop: 6 }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: M3.primary, flexShrink: 0 }} /></div>
+                                <div style={{ width: 32, height: 32, borderRadius: 10, background: `${iconColor}18`, border: `1px solid ${iconColor}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Activity size={13} color={iconColor} /></div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 12, fontWeight: 600, color: M3.text }}>
-                                    <span style={{ color: iconColor }}>{a.username}</span> — {a.action}
-                                  </p>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                                    <Chip role={a.role} />
-                                    <span style={{ fontSize: 10, color: M3.textLow }}>{timeAgo(a.timestamp)}</span>
-                                  </div>
+                                  <p style={{ fontSize: 12, fontWeight: 600, color: M3.text }}><span style={{ color: iconColor }}>{a.username}</span> — {a.action}</p>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}><Chip role={a.role} /><span style={{ fontSize: 10, color: M3.textLow }}>{timeAgo(a.timestamp)}</span></div>
                                 </div>
                               </div>
                             );
@@ -481,20 +433,9 @@ export default function AdminDashboard({ user, onLogout }) {
                         </div>
                       )}
                     </div>
-
                     <div style={{ padding: '12px 20px', borderTop: `1px solid ${M3.outlineVar}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <button
-                        onClick={() => { setActiveTab('overview'); closeNotifications(); }}
-                        style={{ fontSize: 12, fontWeight: 600, color: M3.primary, background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
-                        View all activity →
-                      </button>
-                      <button
-                        onClick={closeNotifications}
-                        style={{ fontSize: 12, fontWeight: 600, color: M3.textLow, background: 'none', border: 'none', cursor: 'pointer' }}
-                      >
-                        Mark as read
-                      </button>
+                      <button onClick={() => { setActiveTab('overview'); closeNotifications(); }} style={{ fontSize: 12, fontWeight: 600, color: M3.primary, background: 'none', border: 'none', cursor: 'pointer' }}>View all activity →</button>
+                      <button onClick={closeNotifications} style={{ fontSize: 12, fontWeight: 600, color: M3.textLow, background: 'none', border: 'none', cursor: 'pointer' }}>Mark as read</button>
                     </div>
                   </div>
                 </>
@@ -510,6 +451,7 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* ── Overview ── */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 18 }}>
@@ -527,15 +469,12 @@ export default function AdminDashboard({ user, onLogout }) {
                         onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
-                        <div style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0, background: avatarColor(u.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white' }}>
-                          {u.username?.charAt(0).toUpperCase()}
-                        </div>
+                        <div style={{ width: 36, height: 36, borderRadius: 18, flexShrink: 0, background: avatarColor(u.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white' }}>{u.username?.charAt(0).toUpperCase()}</div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: M3.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</p>
                         <Chip role={u.role} />
                       </div>
                     ))}
                 </div>
-
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
                   <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
                     <p style={{ fontSize: 15, fontWeight: 700, color: M3.text }}>Activity Log</p>
@@ -548,36 +487,15 @@ export default function AdminDashboard({ user, onLogout }) {
                       : activities.length === 0 ? <p style={{ textAlign: 'center', color: M3.textLow, fontSize: 13, padding: 48 }}>No activity yet</p>
                       : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: M3.surfaceVar }}>
-                              {['User', 'Action', 'Performed By', 'Role', 'Time'].map((h, i) => (
-                                <th key={h} style={{ padding: '11px 20px', textAlign: i === 4 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
+                          <thead><tr style={{ background: M3.surfaceVar }}>{['User','Action','Performed By','Role','Time'].map((h, i) => <th key={h} style={{ padding: '11px 20px', textAlign: i === 4 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>)}</tr></thead>
                           <tbody>
                             {activities.map((a, i) => (
-                              <tr key={a.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar}
-                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                              >
-                                <td style={{ padding: '12px 20px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: 14, background: avatarColor(a.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>
-                                      {a.username?.[0]?.toUpperCase() || 'U'}
-                                    </div>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: M3.text }}>{a.username}</span>
-                                  </div>
-                                </td>
+                              <tr key={a.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <td style={{ padding: '12px 20px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><div style={{ width: 28, height: 28, borderRadius: 14, background: avatarColor(a.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>{a.username?.[0]?.toUpperCase() || 'U'}</div><span style={{ fontSize: 13, fontWeight: 600, color: M3.text }}>{a.username}</span></div></td>
                                 <td style={{ padding: '12px 20px', fontSize: 12, fontWeight: 600, color: a.action?.toLowerCase().includes('delete') ? M3.error : M3.textMed }}>{a.action}</td>
                                 <td style={{ padding: '12px 20px', fontSize: 12, color: M3.textLow }}>{a.performedBy}</td>
                                 <td style={{ padding: '12px 20px' }}><Chip role={a.role} /></td>
-                                <td style={{ padding: '12px 20px', textAlign: 'right' }}>
-                                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                                    <span style={{ fontSize: 11, color: M3.textMed }}>{a.timestamp ? new Date(a.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
-                                    <span style={{ fontSize: 11, color: M3.textLow }}>{a.timestamp ? new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                                  </span>
-                                </td>
+                                <td style={{ padding: '12px 20px', textAlign: 'right' }}><span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}><span style={{ fontSize: 11, color: M3.textMed }}>{a.timestamp ? new Date(a.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span><span style={{ fontSize: 11, color: M3.textLow }}>{a.timestamp ? new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span></span></td>
                               </tr>
                             ))}
                           </tbody>
@@ -589,61 +507,28 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* ── Users ── */}
           {activeTab === 'users' && (
             <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
               <div style={{ padding: '22px 28px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <h2 style={{ fontSize: 17, fontWeight: 800, color: M3.text }}>All Users</h2>
-                  <p style={{ fontSize: 12, color: M3.textLow, marginTop: 3 }}>{users.length} total · {admins.length} admins · {farmers.length} farmers · {buyers.length} buyers</p>
-                </div>
+                <div><h2 style={{ fontSize: 17, fontWeight: 800, color: M3.text }}>All Users</h2><p style={{ fontSize: 12, color: M3.textLow, marginTop: 3 }}>{users.length} total · {admins.length} admins · {farmers.length} farmers · {buyers.length} buyers</p></div>
               </div>
               {isLoading ? <div style={{ padding: 64, display: 'flex', justifyContent: 'center' }}><Loader2 size={28} color={M3.primary} className="animate-spin" /></div>
                 : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ background: M3.surfaceVar }}>
-                        {['User', 'Role', 'Actions'].map((h, i) => (
-                          <th key={h} style={{ padding: '12px 24px', textAlign: i === 2 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
+                    <thead><tr style={{ background: M3.surfaceVar }}>{['User','Role','Actions'].map((h, i) => <th key={h} style={{ padding: '12px 24px', textAlign: i === 2 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>)}</tr></thead>
                     <tbody>
                       {[{ label: 'Administrators', list: admins }, { label: 'Farmers', list: farmers }, { label: 'Buyers', list: buyers }].map(({ label, list }) => (
                         <React.Fragment key={label}>
-                          <tr style={{ background: `${M3.outlineVar}88` }}>
-                            <td colSpan={3} style={{ padding: '9px 24px', fontSize: 11, fontWeight: 800, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                              {label} — {list.length}
-                            </td>
-                          </tr>
+                          <tr style={{ background: `${M3.outlineVar}88` }}><td colSpan={3} style={{ padding: '9px 24px', fontSize: 11, fontWeight: 800, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label} — {list.length}</td></tr>
                           {list.map((u, i) => (
-                            <tr key={u.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }}
-                              onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <td style={{ padding: '15px 24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                  <div style={{ width: 38, height: 38, borderRadius: 19, flexShrink: 0, background: avatarColor(u.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white' }}>
-                                    {u.username?.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p style={{ fontWeight: 700, color: M3.text, fontSize: 14 }}>{u.username}</p>
-                                    <p style={{ fontSize: 11, color: M3.textLow }}>{u.username}@directroot.com</p>
-                                  </div>
-                                </div>
-                              </td>
+                            <tr key={u.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <td style={{ padding: '15px 24px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 14 }}><div style={{ width: 38, height: 38, borderRadius: 19, flexShrink: 0, background: avatarColor(u.username), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'white' }}>{u.username?.charAt(0).toUpperCase()}</div><div><p style={{ fontWeight: 700, color: M3.text, fontSize: 14 }}>{u.username}</p><p style={{ fontSize: 11, color: M3.textLow }}>{u.username}@directroot.com</p></div></div></td>
                               <td style={{ padding: '15px 24px' }}><Chip role={u.role} /></td>
                               <td style={{ padding: '15px 24px', textAlign: 'right' }}>
-                                {u.role !== 'ADMIN' ? (
-                                  <button onClick={() => { if (confirm(`Delete ${u.username}?`)) deleteUser(u.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: `1px solid ${M3.error}44`, background: `${M3.errorCont}44`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                                    <Trash2 size={12} /> Delete
-                                  </button>
-                                ) : u.username === user.username ? (
-                                  <button onClick={() => { if (confirm('Delete your account?')) { deleteUser(u.id); onLogout(); } }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: '1px solid #fb923c44', background: '#7c2d1244', color: '#fb923c', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                                    <Trash2 size={12} /> Delete Mine
-                                  </button>
-                                ) : (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: M3.textLow }}><ShieldCheck size={13} /> Protected</span>
-                                )}
+                                {u.role !== 'ADMIN' ? <button onClick={() => { if (confirm(`Delete ${u.username}?`)) deleteUser(u.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: `1px solid ${M3.error}44`, background: `${M3.errorCont}44`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}><Trash2 size={12} /> Delete</button>
+                                  : u.username === user.username ? <button onClick={() => { if (confirm('Delete your account?')) { deleteUser(u.id); onLogout(); } }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: '1px solid #fb923c44', background: '#7c2d1244', color: '#fb923c', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}><Trash2 size={12} /> Delete Mine</button>
+                                  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: M3.textLow }}><ShieldCheck size={13} /> Protected</span>}
                               </td>
                             </tr>
                           ))}
@@ -655,68 +540,27 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* ── Products ── */}
           {activeTab === 'items' && (
             <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
               <div style={{ padding: '22px 28px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <h2 style={{ fontSize: 17, fontWeight: 800, color: M3.text }}>Product Listings</h2>
-                  <p style={{ fontSize: 12, color: M3.textLow, marginTop: 3 }}>{products.length} products listed by farmers</p>
-                </div>
-                <button onClick={fetchProducts} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, border: `1px solid ${M3.outline}`, background: M3.surfaceVar, color: M3.textMed, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  <RefreshCw size={14} className={isProductsLoading ? 'animate-spin' : ''} /> Refresh
-                </button>
+                <div><h2 style={{ fontSize: 17, fontWeight: 800, color: M3.text }}>Product Listings</h2><p style={{ fontSize: 12, color: M3.textLow, marginTop: 3 }}>{products.length} products listed by farmers</p></div>
+                <button onClick={fetchProducts} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 20, border: `1px solid ${M3.outline}`, background: M3.surfaceVar, color: M3.textMed, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><RefreshCw size={14} className={isProductsLoading ? 'animate-spin' : ''} /> Refresh</button>
               </div>
               {isProductsLoading ? <div style={{ padding: 64, display: 'flex', justifyContent: 'center' }}><Loader2 size={28} color={M3.primary} className="animate-spin" /></div>
                 : filteredProducts.length === 0 ? <div style={{ padding: 64, textAlign: 'center' }}><Wheat size={36} color={M3.textLow} style={{ margin: '0 auto 12px' }} /><p style={{ color: M3.textLow, fontSize: 14 }}>No products found</p></div>
                 : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ background: M3.surfaceVar }}>
-                        {['Product', 'Category', 'Price', 'Stock', 'Farmer', 'Listed'].map((h, i) => (
-                          <th key={h} style={{ padding: '12px 24px', textAlign: i === 5 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
+                    <thead><tr style={{ background: M3.surfaceVar }}>{['Product','Category','Price','Stock','Farmer','Listed'].map((h, i) => <th key={h} style={{ padding: '12px 24px', textAlign: i === 5 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>)}</tr></thead>
                     <tbody>
                       {filteredProducts.map((p, i) => (
-                        <tr key={p.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }}
-                          onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <td style={{ padding: '15px 24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: `${M3.green}18`, border: `1px solid ${M3.green}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: M3.green }}>
-                                {p.name?.[0]?.toUpperCase() || 'P'}
-                              </div>
-                              <div>
-                                <p style={{ fontWeight: 700, color: M3.text }}>{p.name}</p>
-                                {p.description && <p style={{ fontSize: 11, color: M3.textLow, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description}</p>}
-                              </div>
-                            </div>
-                          </td>
+                        <tr key={p.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ padding: '15px 24px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: `${M3.green}18`, border: `1px solid ${M3.green}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: M3.green }}>{p.name?.[0]?.toUpperCase() || 'P'}</div><div><p style={{ fontWeight: 700, color: M3.text }}>{p.name}</p>{p.description && <p style={{ fontSize: 11, color: M3.textLow, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description}</p>}</div></div></td>
                           <td style={{ padding: '15px 24px' }}><Chip category={p.category || 'N/A'} /></td>
                           <td style={{ padding: '15px 24px' }}><span style={{ fontSize: 15, fontWeight: 800, color: M3.green }}>${p.price != null ? Number(p.price).toFixed(2) : '—'}</span></td>
-                          <td style={{ padding: '15px 24px' }}>
-                            {p.quantity === 0
-                              ? <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: `${M3.errorCont}66`, color: M3.error, border: `1px solid ${M3.error}33` }}>Out of stock</span>
-                              : <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <span style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{p.quantity}</span>
-                                  <div style={{ width: 60, height: 4, background: M3.outlineVar, borderRadius: 99, overflow: 'hidden' }}>
-                                    <div style={{ width: `${Math.min((p.quantity / 100) * 100, 100)}%`, height: '100%', background: M3.green, borderRadius: 99 }} />
-                                  </div>
-                                </div>}
-                          </td>
-                          <td style={{ padding: '15px 24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <div style={{ width: 28, height: 28, borderRadius: 14, background: avatarColor(p.farmerUsername), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>
-                                {p.farmerUsername?.[0]?.toUpperCase() || 'F'}
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: M3.textMed }}>{p.farmerUsername || 'Unknown'}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '15px 24px', textAlign: 'right', fontSize: 12, color: M3.textLow }}>
-                            {p.createdAt ? new Date(p.createdAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                          </td>
+                          <td style={{ padding: '15px 24px' }}>{p.quantity === 0 ? <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: `${M3.errorCont}66`, color: M3.error, border: `1px solid ${M3.error}33` }}>Out of stock</span> : <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{p.quantity}</span><div style={{ width: 60, height: 4, background: M3.outlineVar, borderRadius: 99, overflow: 'hidden' }}><div style={{ width: `${Math.min((p.quantity / 100) * 100, 100)}%`, height: '100%', background: M3.green, borderRadius: 99 }} /></div></div>}</td>
+                          <td style={{ padding: '15px 24px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><div style={{ width: 28, height: 28, borderRadius: 14, background: avatarColor(p.farmerUsername), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>{p.farmerUsername?.[0]?.toUpperCase() || 'F'}</div><span style={{ fontSize: 12, fontWeight: 600, color: M3.textMed }}>{p.farmerUsername || 'Unknown'}</span></div></td>
+                          <td style={{ padding: '15px 24px', textAlign: 'right', fontSize: 12, color: M3.textLow }}>{p.createdAt ? new Date(p.createdAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -725,6 +569,110 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           )}
 
+          {/* ── CONTRACTS TAB ── */}
+          {activeTab === 'contracts' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                {[
+                  { label: 'Total Contracts', value: allContracts.length,                                                                                                                               sub: 'All time',          accent: M3.primary },
+                  { label: 'Active',          value: allContracts.filter(c => c.status === 'ACTIVE').length,                                                                                            sub: 'Currently running', accent: M3.green },
+                  { label: 'Pending',         value: allContracts.filter(c => c.status === 'PENDING' || c.status === 'APPLIED').length,                                                                 sub: 'Awaiting action',   accent: M3.yellow },
+                  { label: 'Total Value',     value: `$${allContracts.filter(c => c.status === 'ACTIVE').reduce((s, c) => s + (c.monthlyPrice || 0) * (c.durationMonths || 0), 0).toFixed(0)}`,        sub: 'Active contracts',  accent: M3.tertiary },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: '20px 22px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: s.accent, borderRadius: '20px 20px 0 0' }} />
+                    <p style={{ fontSize: 28, fontWeight: 800, color: M3.text, lineHeight: 1, letterSpacing: '-0.5px', marginBottom: 6 }}>{s.value}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: M3.textMed }}>{s.label}</p>
+                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{s.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Table */}
+              <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, overflow: 'hidden' }}>
+                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: M3.text }}>All Contracts</p>
+                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{filteredContracts.length} of {allContracts.length} contracts</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {['ALL','PENDING','APPLIED','ACTIVE','COMPLETED','CANCELLED'].map(st => (
+                      <button key={st} onClick={() => setContractStatusFilter(st)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: contractStatusFilter === st ? M3.primaryCont : M3.outlineVar, color: contractStatusFilter === st ? M3.primary : M3.textLow, transition: 'all 0.15s' }}>
+                        {st === 'ALL' ? 'All' : st === 'PENDING' ? 'Open' : st === 'APPLIED' ? 'Applied' : st === 'ACTIVE' ? 'Active' : st === 'COMPLETED' ? 'Completed' : 'Cancelled'}
+                      </button>
+                    ))}
+                    <button onClick={fetchAllContracts} style={{ width: 36, height: 36, borderRadius: 18, background: M3.surfaceVar, border: `1px solid ${M3.outline}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: M3.textMed }}>
+                      <RefreshCw size={14} className={isContractsLoading ? 'animate-spin' : ''} />
+                    </button>
+                  </div>
+                </div>
+
+                {isContractsLoading ? (
+                  <div style={{ padding: 64, display: 'flex', justifyContent: 'center' }}><Loader2 size={28} color={M3.primary} className="animate-spin" /></div>
+                ) : filteredContracts.length === 0 ? (
+                  <div style={{ padding: 64, textAlign: 'center' }}>
+                    <FileSignature size={36} color={M3.textLow} style={{ margin: '0 auto 12px' }} />
+                    <p style={{ color: M3.textLow, fontSize: 14 }}>No contracts found</p>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: M3.surfaceVar }}>
+                        {['ID','Buyer','Farmer','Crop','Duration','Value','Status','Actions'].map((h, i) => (
+                          <th key={h} style={{ padding: '11px 18px', textAlign: i === 6 ? 'center' : 'left', fontSize: 11, fontWeight: 700, color: M3.textLow, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredContracts.map((c, i) => (
+                        <tr key={c.id ?? i} style={{ borderTop: `1px solid ${M3.outlineVar}`, transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = M3.outlineVar} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ padding: '13px 18px' }}><span style={{ fontSize: 11, fontFamily: 'monospace', color: M3.textLow }}>#{c.id}</span></td>
+                          <td style={{ padding: '13px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: 9, background: '#0c4a6e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#7dd3fc', flexShrink: 0 }}>{c.buyerUsername?.[0]?.toUpperCase()}</div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: M3.text }}>{c.buyerUsername || '—'}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '13px 18px' }}>
+                            {c.farmerUsername ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: 9, background: '#064e3b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#6ee7b7', flexShrink: 0 }}>{c.farmerUsername[0].toUpperCase()}</div>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: M3.text }}>{c.farmerUsername}</span>
+                              </div>
+                            ) : <span style={{ fontSize: 12, color: M3.textLow, fontStyle: 'italic' }}>No applicant</span>}
+                          </td>
+                          <td style={{ padding: '13px 18px' }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{c.cropType}</p>
+                            <p style={{ fontSize: 11, color: M3.textLow }}>{c.monthlyQuantity} units/mo · {c.deliveryFrequency?.toLowerCase()}</p>
+                          </td>
+                          <td style={{ padding: '13px 18px' }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{c.durationMonths} months</p>
+                            {c.startDate && <p style={{ fontSize: 10, color: M3.textLow, marginTop: 2 }}>{new Date(c.startDate).toLocaleDateString([], { day: '2-digit', month: 'short' })} → {new Date(c.endDate).toLocaleDateString([], { day: '2-digit', month: 'short', year: '2-digit' })}</p>}
+                          </td>
+                          <td style={{ padding: '13px 18px' }}>
+                            <p style={{ fontSize: 14, fontWeight: 800, color: M3.green }}>${((c.monthlyPrice || 0) * (c.durationMonths || 0)).toFixed(0)}</p>
+                            <p style={{ fontSize: 10, color: M3.textLow }}>${c.monthlyPrice}/mo</p>
+                          </td>
+                          <td style={{ padding: '13px 18px', textAlign: 'center' }}><ContractStatusBadge status={c.status} /></td>
+                          <td style={{ padding: '13px 18px' }}>
+                            {c.status === 'ACTIVE' && (
+                              <button onClick={() => { if (confirm(`Mark contract #${c.id} as completed?`)) handleCompleteContract(c.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 10, background: `${M3.greenCont}88`, border: `1px solid ${M3.green}44`, color: M3.green, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                <CheckCircle size={11} /> Complete
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Analytics ── */}
           {activeTab === 'analytics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -733,181 +681,74 @@ export default function AdminDashboard({ user, onLogout }) {
                   <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 24 }}>Distribution across all roles</p>
                   {users.length === 0 ? <p style={{ textAlign: 'center', color: M3.textLow, padding: 40 }}>No user data</p> : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-                      <ResponsiveContainer width={200} height={200}>
-                        <PieChart>
-                          <Pie data={roleDonutData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">
-                            {roleDonutData.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" />)}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        {roleDonutData.map((d, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 12, height: 12, borderRadius: 3, background: d.color, flexShrink: 0 }} />
-                            <div>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{d.value}</p>
-                              <p style={{ fontSize: 11, color: M3.textLow }}>{d.name}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <ResponsiveContainer width={200} height={200}><PieChart><Pie data={roleDonutData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value">{roleDonutData.map((entry, i) => <Cell key={i} fill={entry.color} stroke="none" />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{roleDonutData.map((d, i) => (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: d.color, flexShrink: 0 }} /><div><p style={{ fontSize: 13, fontWeight: 700, color: M3.text }}>{d.value}</p><p style={{ fontSize: 11, color: M3.textLow }}>{d.name}</p></div></div>))}</div>
                     </div>
                   )}
                 </div>
-
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Activity Summary</p>
                   <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 24 }}>Registrations vs deletions</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {activitySummaryData.map((item, i) => (
-                      <div key={i}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: M3.textMed }}>{item.name}</span>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.value}</span>
-                        </div>
-                        <div style={{ height: 10, background: M3.outlineVar, borderRadius: 99, overflow: 'hidden' }}>
-                          <div style={{ width: activities.length > 0 ? `${(item.value / activities.length) * 100}%` : '0%', height: '100%', background: item.color, borderRadius: 99, transition: 'width 0.6s ease' }} />
-                        </div>
-                        <p style={{ fontSize: 11, color: M3.textLow, marginTop: 4 }}>
-                          {activities.length > 0 ? `${Math.round((item.value / activities.length) * 100)}% of total activity` : 'No activity yet'}
-                        </p>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: 8, padding: '14px 16px', borderRadius: 14, background: M3.outlineVar, border: `1px solid ${M3.outline}` }}>
-                      <p style={{ fontSize: 12, color: M3.textLow }}>Total Events</p>
-                      <p style={{ fontSize: 24, fontWeight: 800, color: M3.text }}>{activities.length}</p>
-                    </div>
+                    {activitySummaryData.map((item, i) => (<div key={i}><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span style={{ fontSize: 13, fontWeight: 600, color: M3.textMed }}>{item.name}</span><span style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.value}</span></div><div style={{ height: 10, background: M3.outlineVar, borderRadius: 99, overflow: 'hidden' }}><div style={{ width: activities.length > 0 ? `${(item.value / activities.length) * 100}%` : '0%', height: '100%', background: item.color, borderRadius: 99, transition: 'width 0.6s ease' }} /></div><p style={{ fontSize: 11, color: M3.textLow, marginTop: 4 }}>{activities.length > 0 ? `${Math.round((item.value / activities.length) * 100)}% of total activity` : 'No activity yet'}</p></div>))}
+                    <div style={{ marginTop: 8, padding: '14px 16px', borderRadius: 14, background: M3.outlineVar, border: `1px solid ${M3.outline}` }}><p style={{ fontSize: 12, color: M3.textLow }}>Total Events</p><p style={{ fontSize: 24, fontWeight: 800, color: M3.text }}>{activities.length}</p></div>
                   </div>
                 </div>
               </div>
-
               <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
                 <p style={{ fontSize: 15, fontWeight: 700, color: M3.text, marginBottom: 4 }}>Products by Category</p>
                 <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 24 }}>Number of products in each category</p>
-                {categoryBarData.length === 0 ? <p style={{ textAlign: 'center', color: M3.textLow, padding: 40 }}>No product data yet</p> : (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={categoryBarData} barSize={40}>
-                      <XAxis dataKey="name" tick={{ fill: M3.textLow, fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: M3.textLow, fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: `${M3.primary}10` }} />
-                      <Bar dataKey="count" name="Products" fill={M3.primary} radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                {categoryBarData.length === 0 ? <p style={{ textAlign: 'center', color: M3.textLow, padding: 40 }}>No product data yet</p> : (<ResponsiveContainer width="100%" height={260}><BarChart data={categoryBarData} barSize={40}><XAxis dataKey="name" tick={{ fill: M3.textLow, fontSize: 12 }} axisLine={false} tickLine={false} /><YAxis tick={{ fill: M3.textLow, fontSize: 12 }} axisLine={false} tickLine={false} /><Tooltip content={<CustomTooltip />} cursor={{ fill: `${M3.primary}10` }} /><Bar dataKey="count" name="Products" fill={M3.primary} radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer>)}
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-                {[
-                  { label: 'Total Marketplace Value', value: `$${products.reduce((s, p) => s + (p.price || 0) * (p.quantity || 0), 0).toFixed(2)}`, sub: 'Sum of price × stock', color: M3.green },
-                  { label: 'Avg Product Price', value: products.length > 0 ? `$${(products.reduce((s, p) => s + (p.price || 0), 0) / products.length).toFixed(2)}` : '$0.00', sub: 'Across all listings', color: M3.primary },
-                  { label: 'Out of Stock', value: products.filter(p => p.quantity === 0).length, sub: 'Products with 0 quantity', color: M3.error },
-                ].map((card, i) => (
-                  <div key={i} style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}>
-                    <p style={{ fontSize: 12, color: M3.textLow, marginBottom: 8 }}>{card.label}</p>
-                    <p style={{ fontSize: 28, fontWeight: 800, color: card.color, letterSpacing: '-0.5px' }}>{card.value}</p>
-                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 6 }}>{card.sub}</p>
-                  </div>
-                ))}
+                {[{ label: 'Total Marketplace Value', value: `$${products.reduce((s, p) => s + (p.price || 0) * (p.quantity || 0), 0).toFixed(2)}`, sub: 'Sum of price × stock', color: M3.green }, { label: 'Avg Product Price', value: products.length > 0 ? `$${(products.reduce((s, p) => s + (p.price || 0), 0) / products.length).toFixed(2)}` : '$0.00', sub: 'Across all listings', color: M3.primary }, { label: 'Out of Stock', value: products.filter(p => p.quantity === 0).length, sub: 'Products with 0 quantity', color: M3.error }].map((card, i) => (<div key={i} style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 20, padding: 24 }}><p style={{ fontSize: 12, color: M3.textLow, marginBottom: 8 }}>{card.label}</p><p style={{ fontSize: 28, fontWeight: 800, color: card.color, letterSpacing: '-0.5px' }}>{card.value}</p><p style={{ fontSize: 11, color: M3.textLow, marginTop: 6 }}>{card.sub}</p></div>))}
               </div>
             </div>
           )}
 
+          {/* ── Settings ── */}
           {activeTab === 'settings' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
                   <div style={{ height: 90, background: `linear-gradient(135deg, ${M3.primaryCont}cc, #4c1d9588, #1e1b4b)`, borderBottom: `1px solid ${M3.outline}` }} />
                   <div style={{ padding: '0 24px 24px' }}>
-                    <div style={{ width: 76, height: 76, borderRadius: 22, background: `linear-gradient(135deg, ${M3.primaryCont}, #6d28d9)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: M3.primary, border: `3px solid ${M3.surface}`, marginTop: -38, marginBottom: 12, boxShadow: `0 4px 20px #6d28d944` }}>
-                      {user?.username?.substring(0, 2).toUpperCase() || 'AD'}
-                    </div>
+                    <div style={{ width: 76, height: 76, borderRadius: 22, background: `linear-gradient(135deg, ${M3.primaryCont}, #6d28d9)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: M3.primary, border: `3px solid ${M3.surface}`, marginTop: -38, marginBottom: 12, boxShadow: `0 4px 20px #6d28d944` }}>{user?.username?.substring(0, 2).toUpperCase() || 'AD'}</div>
                     <p style={{ fontSize: 20, fontWeight: 800, color: M3.text }}>{user?.username || 'Administrator'}</p>
                     <p style={{ fontSize: 13, color: M3.textLow, marginTop: 2 }}>{user?.username}@directroot.com</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                      <Chip role="ADMIN" />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <div style={{ width: 6, height: 6, background: M3.green, borderRadius: '50%', boxShadow: `0 0 6px ${M3.green}` }} />
-                        <span style={{ fontSize: 11, color: M3.green, fontWeight: 600 }}>Active</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, marginTop: 20, background: M3.outline, borderRadius: 16, overflow: 'hidden' }}>
-                      {[{ label: 'Users', value: users.length }, { label: 'Products', value: products.length }, { label: 'Logs', value: activities.length }].map((s, i) => (
-                        <div key={i} style={{ background: M3.surfaceVar, padding: '14px 0', textAlign: 'center' }}>
-                          <p style={{ fontSize: 20, fontWeight: 800, color: M3.primary }}>{s.value}</p>
-                          <p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{s.label}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}><Chip role="ADMIN" /><div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 6, height: 6, background: M3.green, borderRadius: '50%', boxShadow: `0 0 6px ${M3.green}` }} /><span style={{ fontSize: 11, color: M3.green, fontWeight: 600 }}>Active</span></div></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, marginTop: 20, background: M3.outline, borderRadius: 16, overflow: 'hidden' }}>{[{ label: 'Users', value: users.length }, { label: 'Products', value: products.length }, { label: 'Logs', value: activities.length }].map((s, i) => (<div key={i} style={{ background: M3.surfaceVar, padding: '14px 0', textAlign: 'center' }}><p style={{ fontSize: 20, fontWeight: 800, color: M3.primary }}>{s.value}</p><p style={{ fontSize: 11, color: M3.textLow, marginTop: 2 }}>{s.label}</p></div>))}</div>
                   </div>
                 </div>
-
                 <div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 24, overflow: 'hidden' }}>
-                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.primary}18`, border: `1px solid ${M3.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Lock size={16} color={M3.primary} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Change Password</p>
-                      <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Update your admin account password</p>
-                    </div>
-                  </div>
+                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.outlineVar}`, display: 'flex', alignItems: 'center', gap: 12 }}><div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.primary}18`, border: `1px solid ${M3.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={16} color={M3.primary} /></div><div><p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Change Password</p><p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Update your admin account password</p></div></div>
                   <div style={{ padding: 24 }}>
                     {pwError && <div style={{ marginBottom: 16, padding: '11px 14px', borderRadius: 12, background: `${M3.errorCont}88`, border: `1px solid ${M3.error}44`, color: M3.error, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><AlertTriangle size={14} /> {pwError}</div>}
                     {pwSuccess && <div style={{ marginBottom: 16, padding: '11px 14px', borderRadius: 12, background: `${M3.greenCont}88`, border: `1px solid ${M3.green}44`, color: M3.green, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><CheckCircle size={14} /> {pwSuccess}</div>}
                     <PwInput label="Current Password" placeholder="Enter current password" value={pwForm.current} onChange={v => setPwForm(f => ({ ...f, current: v }))} show={showPw.current} onToggleShow={() => setShowPw(s => ({ ...s, current: !s.current }))} />
                     <PwInput label="New Password" placeholder="Min. 6 characters" value={pwForm.newPw} onChange={v => setPwForm(f => ({ ...f, newPw: v }))} show={showPw.newPw} onToggleShow={() => setShowPw(s => ({ ...s, newPw: !s.newPw }))} />
                     <PwInput label="Confirm New Password" placeholder="Re-enter new password" value={pwForm.confirm} onChange={v => setPwForm(f => ({ ...f, confirm: v }))} show={showPw.confirm} onToggleShow={() => setShowPw(s => ({ ...s, confirm: !s.confirm }))} />
-                    <button onClick={handleChangePassword} disabled={isPwLoading} style={{ marginTop: 4, width: '100%', padding: '13px', borderRadius: 14, background: isPwLoading ? M3.outlineVar : M3.primaryCont, border: `1px solid ${M3.primary}44`, color: M3.primary, fontSize: 14, fontWeight: 700, cursor: isPwLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                      {isPwLoading ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-                      {isPwLoading ? 'Updating...' : 'Update Password'}
-                    </button>
+                    <button onClick={handleChangePassword} disabled={isPwLoading} style={{ marginTop: 4, width: '100%', padding: '13px', borderRadius: 14, background: isPwLoading ? M3.outlineVar : M3.primaryCont, border: `1px solid ${M3.primary}44`, color: M3.primary, fontSize: 14, fontWeight: 700, cursor: isPwLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{isPwLoading ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}{isPwLoading ? 'Updating...' : 'Update Password'}</button>
                   </div>
                 </div>
               </div>
-
               <div style={{ background: M3.surface, border: `1px solid ${M3.error}55`, borderRadius: 24, overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.error}22`, background: `linear-gradient(135deg, ${M3.errorCont}44, ${M3.errorCont}11)`, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.error}18`, border: `1px solid ${M3.error}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AlertTriangle size={16} color={M3.error} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: M3.error }}>Danger Zone</p>
-                    <p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Irreversible actions — proceed with extreme caution</p>
-                  </div>
-                </div>
+                <div style={{ padding: '20px 24px', borderBottom: `1px solid ${M3.error}22`, background: `linear-gradient(135deg, ${M3.errorCont}44, ${M3.errorCont}11)`, display: 'flex', alignItems: 'center', gap: 12 }}><div style={{ width: 36, height: 36, borderRadius: 12, background: `${M3.error}18`, border: `1px solid ${M3.error}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={16} color={M3.error} /></div><div><p style={{ fontSize: 15, fontWeight: 700, color: M3.error }}>Danger Zone</p><p style={{ fontSize: 11, color: M3.textLow, marginTop: 1 }}>Irreversible actions — proceed with extreme caution</p></div></div>
                 <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {clearLogsSuccess && <div style={{ padding: '11px 14px', borderRadius: 12, background: `${M3.greenCont}88`, border: `1px solid ${M3.green}44`, color: M3.green, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><CheckCircle size={14} /> {clearLogsSuccess}</div>}
                   <div style={{ borderRadius: 16, border: `1px solid ${M3.outline}`, overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 18px', background: M3.outlineVar }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Clear Activity Logs</p>
-                      <p style={{ fontSize: 12, color: M3.textLow, marginTop: 4, lineHeight: 1.5 }}>Permanently delete all <strong style={{ color: M3.textMed }}>{activities.length}</strong> activity log entries. This cannot be undone.</p>
-                    </div>
-                    <div style={{ padding: '12px 18px', borderTop: `1px solid ${M3.outline}`, display: 'flex', justifyContent: 'flex-end' }}>
-                      <button onClick={handleClearLogs} disabled={clearLogsLoading || activities.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: `1px solid ${M3.error}55`, background: `${M3.errorCont}55`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: clearLogsLoading || activities.length === 0 ? 'not-allowed' : 'pointer', opacity: activities.length === 0 ? 0.4 : 1 }}>
-                        {clearLogsLoading ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                        {clearLogsLoading ? 'Clearing...' : 'Clear Logs'}
-                      </button>
-                    </div>
+                    <div style={{ padding: '16px 18px', background: M3.outlineVar }}><p style={{ fontSize: 14, fontWeight: 700, color: M3.text }}>Clear Activity Logs</p><p style={{ fontSize: 12, color: M3.textLow, marginTop: 4, lineHeight: 1.5 }}>Permanently delete all <strong style={{ color: M3.textMed }}>{activities.length}</strong> activity log entries. This cannot be undone.</p></div>
+                    <div style={{ padding: '12px 18px', borderTop: `1px solid ${M3.outline}`, display: 'flex', justifyContent: 'flex-end' }}><button onClick={handleClearLogs} disabled={clearLogsLoading || activities.length === 0} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: `1px solid ${M3.error}55`, background: `${M3.errorCont}55`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: clearLogsLoading || activities.length === 0 ? 'not-allowed' : 'pointer', opacity: activities.length === 0 ? 0.4 : 1 }}>{clearLogsLoading ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}{clearLogsLoading ? 'Clearing...' : 'Clear Logs'}</button></div>
                   </div>
                   <div style={{ borderRadius: 16, border: `1px solid ${M3.error}44`, overflow: 'hidden' }}>
-                    <div style={{ padding: '16px 18px', background: `${M3.errorCont}22` }}>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: M3.error }}>Delete My Account</p>
-                      <p style={{ fontSize: 12, color: M3.textLow, marginTop: 4, lineHeight: 1.5 }}>Permanently delete your admin account <strong style={{ color: M3.textMed }}>({user?.username})</strong>. You will be immediately signed out.</p>
-                      <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10, background: `${M3.error}11`, border: `1px solid ${M3.error}22` }}>
-                        <p style={{ fontSize: 11, color: M3.error, fontWeight: 600 }}>⚠ Make sure another admin account exists before deleting yours.</p>
-                      </div>
-                    </div>
-                    <div style={{ padding: '12px 18px', borderTop: `1px solid ${M3.error}22`, display: 'flex', justifyContent: 'flex-end' }}>
-                      <button onClick={() => { if (confirm(`Delete your account "${user?.username}"? This is permanent.`)) { deleteUser(users.find(u => u.username === user?.username)?.id); onLogout(); } }} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: `1px solid ${M3.error}77`, background: `${M3.errorCont}88`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                        <Trash2 size={13} /> Delete My Account
-                      </button>
-                    </div>
+                    <div style={{ padding: '16px 18px', background: `${M3.errorCont}22` }}><p style={{ fontSize: 14, fontWeight: 700, color: M3.error }}>Delete My Account</p><p style={{ fontSize: 12, color: M3.textLow, marginTop: 4, lineHeight: 1.5 }}>Permanently delete your admin account <strong style={{ color: M3.textMed }}>({user?.username})</strong>. You will be immediately signed out.</p><div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10, background: `${M3.error}11`, border: `1px solid ${M3.error}22` }}><p style={{ fontSize: 11, color: M3.error, fontWeight: 600 }}>⚠ Make sure another admin account exists before deleting yours.</p></div></div>
+                    <div style={{ padding: '12px 18px', borderTop: `1px solid ${M3.error}22`, display: 'flex', justifyContent: 'flex-end' }}><button onClick={() => { if (confirm(`Delete your account "${user?.username}"? This is permanent.`)) { deleteUser(users.find(u => u.username === user?.username)?.id); onLogout(); } }} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: `1px solid ${M3.error}77`, background: `${M3.errorCont}88`, color: M3.error, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}><Trash2 size={13} /> Delete My Account</button></div>
                   </div>
                 </div>
               </div>
             </div>
           )}
+
         </div>
       </main>
     </div>
