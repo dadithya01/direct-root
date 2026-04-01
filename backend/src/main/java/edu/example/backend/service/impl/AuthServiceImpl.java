@@ -79,7 +79,6 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getRole() == Role.FARMER) {
-            // Block if products still listed
             List<Product> products = productRepository.findByFarmerUsername(username);
             if (!products.isEmpty()) {
                 throw new RuntimeException(
@@ -88,12 +87,9 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
 
-            // Anonymize order items so new users with same username
-            // don't inherit this farmer's sales history
             orderItemRepository.anonymizeFarmerItems(username);
         }
 
-        // Save activity log BEFORE deleting user
         activityLogRepository.save(ActivityLog.builder()
                 .username(user.getUsername())
                 .action("Account Deleted")
@@ -102,7 +98,6 @@ public class AuthServiceImpl implements AuthService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        // Delete user
         userRepository.delete(user);
     }
 }
