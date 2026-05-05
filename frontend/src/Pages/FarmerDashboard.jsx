@@ -678,6 +678,7 @@ export default function FarmerDashboard({ user, onLogout }) {
             const stockData = products.map(p => ({ name: p.name?.length > 10 ? p.name.slice(0, 10) + '…' : p.name, stock: p.quantity }));
             const DONUT_COLORS = ['#34d399', '#c3c6ff', '#f5c518', '#ffb4ab', '#7dd3fc', '#fdba74'];
             const ChartTooltip = ({ active, payload, label }) => { if (!active || !payload?.length) return null; return (<div style={{ background: M3.surface, border: `1px solid ${M3.outline}`, borderRadius: 10, padding: '8px 12px' }}>{label && <p style={{ fontSize: 11, color: M3.textLow, marginBottom: 3 }}>{label}</p>}{payload.map((p, i) => (<p key={i} style={{ fontSize: 13, fontWeight: 700, color: p.color || M3.farmer }}>{p.name}: {p.value}</p>))}</div>); };
+
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -709,6 +710,7 @@ export default function FarmerDashboard({ user, onLogout }) {
                   {stockData.length === 0 ? <p style={{ textAlign: 'center', color: M3.textLow, padding: 40, fontSize: 13 }}>No products listed</p> : (<><ResponsiveContainer width="100%" height={220}><BarChart data={stockData} barSize={36}><XAxis dataKey="name" tick={{ fill: M3.textLow, fontSize: 11 }} axisLine={false} tickLine={false} /><YAxis tick={{ fill: M3.textLow, fontSize: 11 }} axisLine={false} tickLine={false} /><Tooltip content={<ChartTooltip />} cursor={{ fill: `${M3.primary}10` }} /><Bar dataKey="stock" name="Stock" radius={[8, 8, 0, 0]}>{stockData.map((entry, i) => <Cell key={i} fill={entry.stock === 0 ? M3.error : entry.stock < 5 ? M3.yellow : M3.farmer} />)}</Bar></BarChart></ResponsiveContainer><div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 12 }}>{[{ color: M3.farmer, label: 'Good stock' }, { color: M3.yellow, label: 'Low stock (< 5)' }, { color: M3.error, label: 'Out of stock' }].map((l, i) => (<div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: 3, background: l.color }} /><span style={{ fontSize: 11, color: M3.textLow }}>{l.label}</span></div>))}</div></>)}
                 </div>
               </div>
+              
             );
           })()}
 
